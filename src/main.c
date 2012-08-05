@@ -1,0 +1,115 @@
+/**
+ * gcc -o main *.c file-dialog.c `pkg-config --cflags --libs gtk+-2.0`
+ */
+#include <config.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <errno.h>
+#include <string.h>
+
+#include <gtk/gtk.h>
+
+#include "utils.h"
+
+#include "shot.h"
+
+#define WAKE_UP_SIGNAL    SIGUSR1
+#define LOCK_FILE ("/tmp/gtkshot.lock")
+
+static GtkShot *shot = NULL;
+
+static void wake_up(gint signo);
+static void exit_clean(gint signo);
+static void quit();
+static void remove_lock_file();
+static gint new_lock_file();
+
+int main(int argc, char *argv[]) {
+  gint pid = new_lock_file();
+
+  if (pid > 0) {
+    if (kill(pid, WAKE_UP_SIGNAL) == 0) {
+      exit(0); // 进程确已存在,则退出新进程
+    } else { // 否则,重新创建锁定文件
+      remove_lock_file();
+      new_lock_file();
+    }
+  }
+  signal(WAKE_UP_SIGNAL, wake_up);
+  signal(SIGINT, exit_clean);
+
+  gtk_init(&argc, &argv);
+
+  shot = gtk_shot_new();
+  shot->quit = quit;
+  gtk_shot_show(shot, TRUE);
+
+  gtk_main();
+
+  return 0;
+}
+
+void wake_up(gint signo) {
+  gtk_shot_show(shot, TRUE);
+  debug("GtkShot has been wake up...\n");
+}
+
+void exit_clean(gint signo) {
+  quit();
+}
+
+void quit() {
+  debug("GtkShot has exit" \
+                  ", you will not get shot image any more...\n");
+
+  remove_lock_file();
+  gtk_main_quit();
+  exit(0);
+}
+
+void remove_lock_file() {
+  if (remove(LOCK_FILE) == 0) {
+    debug("clean lock file [%s] successfully...\n", LOCK_FILE);
+  } else {
+    debug("can not remove lock file [%s]: %s" \
+              ", please remove it by yourself...\n"
+                                  , LOCK_FILE, strerror(errno));
+  }
+}
+
+/**
+ * 创建锁文件,并返回进程PID
+ * @return (= 0), 进程不存在,新建锁文件;
+ *         (> 0), 进程已存在,且PID为该返回值
+ *                ,并保留原锁文件;
+ */
+gint new_lock_file() {
+  FILE *f = fopen(LOCK_FILE, "r");
+  gint pid = 0;
+
+  if (f) {
+    fscanf(f, "gtk-shot-pid: %d", &pid);
+    //fread(&pid, sizeof(gint), 1, f);
+#ifdef GTK_SHOT_DEBUG
+    debug("GtkShot exists: pid is %d\n", pid);
+#endif
+  } else if ((f = fopen(LOCK_FILE, "w+"))) {
+    pid = getpid();
+    fprintf(f, "gtk-shot-pid: %d", pid);
+    //fwrite(&pid, sizeof(gint), 1, f);
+#ifdef GTK_SHOT_DEBUG
+    debug("new GtkShot: pid is %d\n", pid);
+#endif
+    pid = 0;
+  } else {
+    debug("no lock file and create lock file failed[%s]: %s\n"
+                                , LOCK_FILE, strerror(errno));
+    exit(-1);
+  }
+  if (f) fclose(f);
+
+  return pid;
+}
+
