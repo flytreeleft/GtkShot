@@ -63,7 +63,7 @@ static gboolean on_shot_key_press(GtkWidget *widget, GdkEventKey *event);
 
 // private(第一个参数为GtkShot时,函数名称以gtk_shot_开头)
 static void gtk_shot_draw_screen(GtkShot *shot, cairo_t *cr);
-static void gtk_shot_redraw_section(GtkShot *shot, cairo_t *cr);
+static void gtk_shot_draw_section(GtkShot *shot, cairo_t *cr);
 static void gtk_shot_clean_section(GtkShot *shot);
 static void gtk_shot_move_section(GtkShot *shot, gint x, gint y);
 static void gtk_shot_resize_section(GtkShot *shot, gint x, gint y);
@@ -147,6 +147,9 @@ void gtk_shot_init(GtkShot *shot) {
   shot->screen_pixbuf = get_screen_pixbuf(shot->x, shot->y
                                             , shot->width
                                             , shot->height);
+  shot->mask_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32
+                                                    , shot->width
+                                                    , shot->height);
 #ifdef GTK_SHOT_DEBUG
   debug("window size(%d, %d), section color(%x: %x, %x, %x)\n"
                     , shot->width, shot->height
@@ -342,7 +345,7 @@ void gtk_shot_save_pen(GtkShot *shot, gboolean reset) {
   if (!shot->pen) return;
 
   shot->historic_pen
-      = g_slist_prepend(shot->historic_pen
+      = g_slist_append(shot->historic_pen
                           , gtk_shot_pen_flat_copy(shot->pen));
   if (reset) {
     gtk_shot_pen_reset(shot->pen);
@@ -361,14 +364,22 @@ void gtk_shot_undo_pen(GtkShot *shot) {
 
 gboolean on_shot_expose(GtkWidget *widget, GdkEventExpose *event) {
   GtkShot *shot = GTK_SHOT(widget);
-  cairo_t *cr;
+  cairo_t *cr, *mask_cr;
 
   cr = gdk_cairo_create(gtk_widget_get_window(widget));
+  cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
 
-  cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
-  //gtk_shot_draw_screen(shot, cr);
-  gtk_shot_redraw_section(shot, cr);
+  mask_cr = cairo_create(shot->mask_surface);
+  cairo_set_operator(mask_cr, CAIRO_OPERATOR_SOURCE);
+  // 窗口上绘制截屏图像
+  gtk_shot_draw_screen(shot, cr);
+  // mask层绘制选区边框和涂鸦
+  gtk_shot_draw_section(shot, mask_cr);
+  // 将mask层合并到窗口上
+  cairo_set_source_surface(cr, shot->mask_surface, 0, 0);
+  cairo_paint(cr);
 
+  cairo_destroy(mask_cr);
   cairo_destroy(cr);
 
   return TRUE;
@@ -547,7 +558,7 @@ void gtk_shot_draw_screen(GtkShot *shot, cairo_t *cr) {
   cairo_paint(cr);
 }
 
-void gtk_shot_redraw_section(GtkShot *shot, cairo_t *cr) {
+void gtk_shot_draw_section(GtkShot *shot, cairo_t *cr) {
   if (shot->section.width > 0 || shot->section.height > 0) {
     // transparent section
     draw_rect_area(cr, shot->section.x

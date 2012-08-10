@@ -88,6 +88,7 @@ typedef struct _GtkShot {
   GtkWindow parent;
 
   GdkPixbuf *screen_pixbuf; // 整个屏幕的截图
+  cairo_surface_t *mask_surface; // 遮罩层
 
   GtkShotMode mode;
   gint width, height; // 窗口的宽度和高度
