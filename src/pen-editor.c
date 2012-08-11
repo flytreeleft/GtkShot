@@ -23,6 +23,7 @@
 #include "utils.h"
 
 #include "xpm.h"
+#include "shot.h"
 #include "pen-editor.h"
 
 typedef struct _ColorMap {
@@ -49,35 +50,27 @@ static ColorMap color_maps[] = {
 };
 
 // Button Events
-static void
-    on_set_pen_size(GtkToggleButton *btn, GtkShotPenEditor *editor);
-static void
-    on_set_pen_font(GtkFontButton *btn, GParamSpec *pspec
-                            , GtkShotPenEditor *editor);
-static void
-    on_set_pen_color(GtkColorButton *btn, GParamSpec *pspec
-                            , GtkShotPenEditor *editor);
-static void
-    on_change_color(GtkButton *btn, GtkColorButton *color_btn);
-static gboolean
-    on_color_button_expose(GtkWidget *widget, GdkEventExpose *event
-                              , gpointer *color);
+static void on_set_pen_size(GtkToggleButton *btn
+                                , GtkShotPenEditor *editor);
+static void on_set_pen_font(GtkFontButton *btn, GParamSpec *pspec
+                                , GtkShotPenEditor *editor);
+static void on_set_pen_color(GtkColorButton *btn, GParamSpec *pspec
+                                , GtkShotPenEditor *editor);
+static void on_change_color(GtkButton *btn
+                                , GtkColorButton *color_btn);
+static gboolean on_color_button_expose(GtkWidget *widget
+                                          , GdkEventExpose *event
+                                          , gpointer *color);
 
 static GtkBox* create_size_box(GtkShotPenEditor *editor);
 static GtkBox* create_font_box(GtkShotPenEditor *editor);
 static GtkBox* create_color_box(GtkShotPenEditor *editor);
 
-GtkShotPenEditor* gtk_shot_pen_editor_new(GtkWindow *parent) {
+GtkShotPenEditor* gtk_shot_pen_editor_new(GtkShot *shot) {
+  gint width = 305, height = 36;
   GtkShotPenEditor *editor = g_new(GtkShotPenEditor, 1);
-
   GtkWindow *window =
-            GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
-  gtk_window_set_transient_for(window, parent);
-  gtk_widget_set_can_focus(GTK_WIDGET(window), TRUE);
-  gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
-  gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window), TRUE);
-  gtk_window_set_resizable(window, FALSE);
-  gtk_window_set_default_size(window, 305, 36);
+        create_popup_window(GTK_WINDOW(shot), width, height);
   
   GtkBox *hbox = GTK_BOX(gtk_hbox_new(FALSE, 2));
   GtkBox *left_box = GTK_BOX(gtk_hbox_new(FALSE, 2));
@@ -101,8 +94,8 @@ GtkShotPenEditor* gtk_shot_pen_editor_new(GtkWindow *parent) {
   editor->size_box = size_box;
   editor->font_box = font_box;
   editor->x = editor->y = 0;
-  editor->width = 305;
-  editor->height = 36;
+  editor->width = width;
+  editor->height = height;
 
   editor->size = GTK_SHOT_DEFAULT_PEN_SIZE;
   editor->color = GTK_SHOT_DEFAULT_PEN_COLOR;
@@ -240,7 +233,6 @@ GtkBox* create_color_box(GtkShotPenEditor *editor) {
     g_signal_connect(btn, "clicked"
                         , G_CALLBACK(on_change_color)
                         , color_btn);
-    gtk_button_set_focus_on_click(GTK_BUTTON(btn), FALSE);
     gtk_widget_set_tooltip_text(btn, color_maps[i].name);
     g_object_set_data(G_OBJECT(btn)
                           , "pen-color"
@@ -294,14 +286,14 @@ void on_set_pen_size(GtkToggleButton *btn, GtkShotPenEditor *editor) {
 }
 
 void on_set_pen_font(GtkFontButton *btn, GParamSpec *pspec
-                                        , GtkShotPenEditor *editor) {
+                            , GtkShotPenEditor *editor) {
   if (editor->pen) {
     // 从FontButton中获取的字体不能被free,故将其复制一份
     if (editor->pen->text.fontname) {
       g_free(editor->pen->text.fontname);
     }
     editor->fontname =
-              gtk_font_button_get_font_name(GTK_FONT_BUTTON(btn));
+            gtk_font_button_get_font_name(GTK_FONT_BUTTON(btn));
     editor->pen->text.fontname = g_strdup(editor->fontname);
 #ifdef GTK_SHOT_DEBUG
     debug("font: %s\n", editor->pen->text.fontname);
@@ -310,14 +302,16 @@ void on_set_pen_font(GtkFontButton *btn, GParamSpec *pspec
 }
 
 void on_set_pen_color(GtkColorButton *btn, GParamSpec *pspec
-                                          , GtkShotPenEditor *editor) {
+                              , GtkShotPenEditor *editor) {
   if (editor->pen) {
     GdkColor c;
     gtk_color_button_get_color(btn, &c);
     editor->color = parse_gdk_color(c);
     editor->pen->color = editor->color;
 #ifdef GTK_SHOT_DEBUG
-    debug("%s, %06x\n", gdk_color_to_string(&c), editor->pen->color);
+    debug("%s, %06x\n"
+              , gdk_color_to_string(&c)
+              , editor->pen->color);
 #endif
   }
 }
@@ -330,8 +324,9 @@ void on_change_color(GtkButton *btn, GtkColorButton *color_btn) {
   gtk_color_button_set_color(color_btn, &c);
 }
 
-gboolean on_color_button_expose(GtkWidget *widget, GdkEventExpose *event
-                                                  , gpointer *color) {
+gboolean on_color_button_expose(GtkWidget *widget
+                                        , GdkEventExpose *event
+                                        , gpointer *color) {
   cairo_t *cr;
   gint c = GPOINTER_TO_INT(color);
 

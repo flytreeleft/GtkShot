@@ -41,33 +41,23 @@ static PenButton pen_btns[] = {
 };
 
 // Button Events
-static gboolean
-    on_change_pen(GtkToggleButton *btn, GtkShotToolbar *toolbar);
-static gboolean
-    on_undo(GtkButton *btn, GtkShotToolbar *toolbar);
-static gboolean
-    on_save_to_file(GtkButton *btn, GtkShotToolbar *toolbar); 
-static gboolean
-    on_save_to_clipboard(GtkButton *btn, GtkShotToolbar *toolbar); 
-static gboolean
-    on_quit(GtkButton *btn, GtkShotToolbar *toolbar);
-
+static gboolean on_change_pen(GtkToggleButton *btn
+                                  , GtkShotToolbar *toolbar);
+static gboolean on_undo(GtkButton *btn
+                            , GtkShotToolbar *toolbar);
+static gboolean on_save_to_file(GtkButton *btn
+                                    , GtkShotToolbar *toolbar); 
+static gboolean on_save_to_clipboard(GtkButton *btn
+                                        , GtkShotToolbar *toolbar); 
+static gboolean on_quit(GtkButton *btn, GtkShotToolbar *toolbar);
 static GtkBox* create_pen_box(GtkShotToolbar *toolbar);
 static GtkBox* create_op_box(GtkShotToolbar *toolbar);
 
-GtkShotToolbar* gtk_shot_toolbar_new(GtkWindow *parent) {
-  g_return_val_if_fail(IS_GTK_SHOT(parent), NULL);
-
+GtkShotToolbar* gtk_shot_toolbar_new(GtkShot *shot) {
+  gint width = 338, height = 36;
   GtkShotToolbar *toolbar = g_new(GtkShotToolbar, 1);
-  
   GtkWindow *window =
-            GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
-  gtk_window_set_transient_for(window, parent);
-  gtk_widget_set_can_focus(GTK_WIDGET(window), TRUE);
-  gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
-  gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window), TRUE);
-  gtk_window_set_resizable(window, FALSE);
-  gtk_window_set_default_size(window, 338, 36);
+        create_popup_window(GTK_WINDOW(shot), width, height);
   
   GtkBox *hbox = GTK_BOX(gtk_hbox_new(FALSE, 2));
   toolbar->pen_box = create_pen_box(toolbar);
@@ -78,11 +68,11 @@ GtkShotToolbar* gtk_shot_toolbar_new(GtkWindow *parent) {
   pack_to_box(hbox, toolbar->op_box);
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(hbox));
 
-  toolbar->shot = GTK_SHOT(parent);
+  toolbar->shot = shot;
   toolbar->window = window;
   toolbar->x = toolbar->y = 0;
-  toolbar->width = 338;
-  toolbar->height = 36;
+  toolbar->width = width;
+  toolbar->height = height;
 
   return toolbar;
 }
@@ -100,7 +90,8 @@ void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar) {
   gtk_widget_hide_all(GTK_WIDGET(toolbar->window));
 }
 
-gboolean on_change_pen(GtkToggleButton *btn, GtkShotToolbar *toolbar) {
+gboolean on_change_pen(GtkToggleButton *btn
+                                , GtkShotToolbar *toolbar) {
   GList *l =
         gtk_container_get_children(GTK_CONTAINER(toolbar->pen_box));
   GtkToggleButton *act = NULL;
@@ -141,7 +132,7 @@ gboolean on_save_to_file(GtkButton *btn, GtkShotToolbar *toolbar) {
   GdkPixbuf *pixbuf = gtk_shot_get_section_pixbuf(toolbar->shot);
   gchar *filename =
         choose_and_get_filename(GTK_WINDOW(toolbar->shot)
-                                    , &type);
+                                    , &type, NULL);
   if (filename != NULL) {
     GError *error = NULL;
     succ = gdk_pixbuf_save(pixbuf, filename, type

@@ -38,11 +38,13 @@ void parse_to_gdk_color(gint color, GdkColor *c) {
 }
 
 /* source from gpicview-0.2.2 START */
-static void on_file_save_filter_changed(GObject* obj, GParamSpec* pspec
-                                          , gpointer user_data) {
+static void on_file_save_filter_changed(GObject* obj
+                                            , GParamSpec* pspec
+                                            , gpointer user_data) {
   GtkFileChooser *dialog = (GtkFileChooser*) obj;
   GtkFileFilter *filter = gtk_file_chooser_get_filter(dialog);
-  const char *type = (const char*) g_object_get_data(G_OBJECT(filter), "type");
+  const char *type =
+      (const char*) g_object_get_data(G_OBJECT(filter), "type");
   char *name = NULL;
 
   name = g_strdup_printf("%s.%s", FILE_NAME, type, NULL);
@@ -53,14 +55,20 @@ static void on_file_save_filter_changed(GObject* obj, GParamSpec* pspec
   g_free(name);
 }
 
-gchar* choose_and_get_filename(GtkWindow *parent, char **type) {
+gchar* choose_and_get_filename(GtkWindow *parent, char **type
+                                    , const char *path) {
   gchar *filename = NULL;
   GtkFileChooser *dialog = (GtkFileChooser*)
     gtk_file_chooser_dialog_new(NULL, parent
                                   , GTK_FILE_CHOOSER_ACTION_SAVE
-                                  , GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL
-                                  , GTK_STOCK_SAVE, GTK_RESPONSE_OK, NULL);
-  g_signal_connect(dialog, "notify::filter", G_CALLBACK(on_file_save_filter_changed), NULL);
+                                  , GTK_STOCK_CANCEL
+                                  , GTK_RESPONSE_CANCEL
+                                  , GTK_STOCK_SAVE
+                                  , GTK_RESPONSE_OK
+                                  , NULL);
+  gtk_file_chooser_set_do_overwrite_confirmation(dialog, TRUE);
+  g_signal_connect(dialog, "notify::filter"
+                      , G_CALLBACK(on_file_save_filter_changed), NULL);
 
   GSList *modules, *module;
   GtkFileFilter *filter, *default_filter;
@@ -86,7 +94,8 @@ gchar* choose_and_get_filename(GtkWindow *parent, char **type) {
     mimes = gdk_pixbuf_format_get_mime_types(format);
     tmp = g_strdup_printf("%s (*.%s)", desc, exts[0], NULL);
 
-    g_object_set_data_full(G_OBJECT(filter), "type", name, (GDestroyNotify) g_free);
+    g_object_set_data_full(G_OBJECT(filter), "type", name
+                                , (GDestroyNotify) g_free);
     g_strfreev(exts);
     g_free(desc);
     gtk_file_filter_set_name(filter, tmp);
@@ -105,6 +114,9 @@ gchar* choose_and_get_filename(GtkWindow *parent, char **type) {
   g_slist_free(modules);
 
   gtk_file_chooser_set_filter(dialog, default_filter);
+  if (path) {
+    gtk_file_chooser_set_current_folder(dialog, path);
+  }
   if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK) {
     filter = gtk_file_chooser_get_filter(dialog);
     filename = g_locale_from_utf8(gtk_file_chooser_get_filename(dialog)
@@ -114,6 +126,20 @@ gchar* choose_and_get_filename(GtkWindow *parent, char **type) {
   gtk_widget_destroy(GTK_WIDGET(dialog));
 
   return filename;
+}
+
+GtkWindow* create_popup_window(GtkWindow *parent
+                                    , gint width, gint height) {
+  GtkWindow *window =
+            GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
+
+  gtk_window_set_transient_for(window, parent);
+  gtk_window_set_decorated(window, FALSE);
+  gtk_window_set_skip_taskbar_hint(window, TRUE);
+  gtk_window_set_resizable(window, FALSE);
+  gtk_window_set_default_size(window, width, height);
+
+  return window;
 }
 
 GtkWidget* create_icon_button(const char *icon, const char *tip
@@ -151,7 +177,8 @@ GtkWidget* create_image_button(GtkWidget *img, const char *tip
 GtkWidget* create_xpm_button(const char **xpm, const char *tip
                                 , GCallback cb, gboolean toggle
                                 , gpointer data) {
-  GtkWidget *img = gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_xpm_data(xpm));
+  GtkWidget *img =
+        gtk_image_new_from_pixbuf(gdk_pixbuf_new_from_xpm_data(xpm));
   return create_image_button(img, tip, cb, toggle, data);
 }
 
@@ -161,7 +188,8 @@ GtkWidget* create_color_button(gint color, gint width, gint height
                                   , gpointer data) {
   GdkPixbuf *pixbuf, *img;
 
-  pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, width, height);
+  pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8
+                              , width, height);
   gdk_pixbuf_fill(pixbuf, color << 8); // 此处的颜色应为RRGGBBAA形式
 
   img = gtk_image_new_from_pixbuf(pixbuf);
@@ -172,10 +200,11 @@ GtkWidget* create_color_button(gint color, gint width, gint height
 }
 
 void popup_message_dialog(GtkWindow *parent, const char *msg) {
-  GtkWidget *msg_dlg = gtk_message_dialog_new(parent, GTK_DIALOG_MODAL
-                                                , GTK_MESSAGE_ERROR
-                                                , GTK_BUTTONS_OK
-                                                , "%s", msg);
+  GtkWidget *msg_dlg =
+            gtk_message_dialog_new(parent, GTK_DIALOG_MODAL
+                                          , GTK_MESSAGE_ERROR
+                                          , GTK_BUTTONS_OK
+                                          , "%s", msg);
   gtk_dialog_run(GTK_DIALOG(msg_dlg));
   gtk_widget_destroy(msg_dlg);
 }

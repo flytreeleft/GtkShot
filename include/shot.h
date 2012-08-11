@@ -20,14 +20,33 @@
 
 #include <gtk/gtk.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef struct _GtkShotClass GtkShotClass;
+typedef enum _GtkShotMode GtkShotMode;
+typedef enum _GtkShotCursorPos GtkShotCursorPos;
+typedef struct _GtkShotSection GtkShotSection;
+typedef struct _GtkShot GtkShot;
+
 #include "pen.h"
 #include "input.h"
 #include "toolbar.h"
 #include "pen-editor.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/* The border of anchor */
+#define GTK_SHOT_ANCHOR_BORDER 6
+/* The color of mask */
+#define GTK_SHOT_COLOR 0x000000
+/* Whether using anchor around area of caputure */
+#define GTK_SHOT_NO_ANCHOR 0
+/* The opacity of mask */
+#define GTK_SHOT_OPACITY 0.8
+/* The border of selection of capture */
+#define GTK_SHOT_SECTION_BORDER 2
+/* The color of selection of capture */
+#define GTK_SHOT_SECTION_COLOR 0x00ff00
 
 #define GTK_SHOT_TYPE    (gtk_shot_get_type())
 #define GTK_SHOT(obj) \
@@ -41,11 +60,11 @@ extern "C" {
 #define GTK_SHOT_GET_CLASS(obj) \
           (G_TYPE_INSTANCE_GET_CLASS((obj), GTK_SHOT_TYPE, GtkShotClass))
 
-typedef struct _GtkShotClass {
+struct _GtkShotClass {
   GtkWindowClass parent_class;
-} GtkShotClass;
+};
 
-typedef enum _GtkShotMode {
+enum _GtkShotMode {
   NORMAL_MODE = 0, /* 一般模式 */
   DRAW_MODE, /* 绘制模式 */
   MOVE_MODE, /* 移动模式 */
@@ -58,9 +77,9 @@ typedef enum _GtkShotMode {
    * 即只能进行编辑,不能移动和缩放
    */
   SAVE_MODE
-} GtkShotMode;
+};
 
-typedef enum _GtkShotCursorPos {
+enum _GtkShotCursorPos {
   /* 以下方位需要保持相邻
    * ,并且按逆/顺时针排序
    * ,第一个方位值必须为0
@@ -75,16 +94,16 @@ typedef enum _GtkShotCursorPos {
   LEFT_TOP_OF_SECTION,
   OUTER_OF_SECTION,
   INNER_OF_SECTION
-} GtkShotCursorPos;
+};
 
-typedef struct _GtkShotSection {
+struct _GtkShotSection {
   gint x, y;
   gint width, height;
   gint border; // 选区边框大小
   gint color; // 选区边框颜色
-} GtkShotSection;
+};
 
-typedef struct _GtkShot {
+struct _GtkShot {
   GtkWindow parent;
 
   GdkPixbuf *screen_pixbuf; // 整个屏幕的截图
@@ -103,7 +122,7 @@ typedef struct _GtkShot {
   GdkCursorType edit_cursor; // 编辑模式下的鼠标样式
   GdkPoint move_start, move_end; // 移动时的起点和终点
 
-  struct _GtkShotToolbar *toolbar; // 工具条
+  GtkShotToolbar *toolbar; // 工具条
   GtkShotPenEditor *pen_editor; // 画笔编辑器
   GtkShotPen *pen; // 当前使用的画笔
   GSList *historic_pen; // 历史画笔
@@ -111,7 +130,7 @@ typedef struct _GtkShot {
 
   // FUNCTION
   void (*quit)();
-} GtkShot;
+};
 
 GtkShot* gtk_shot_new();
 

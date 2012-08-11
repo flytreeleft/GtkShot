@@ -24,17 +24,26 @@
 extern "C" {
 #endif
 
+typedef struct _GtkShotPen GtkShotPen;
+typedef enum _GtkShotPenType GtkShotPenType;
+
+/* The color of pen */
+#define GTK_SHOT_DEFAULT_PEN_COLOR 0xff0000
+/* The font name of pen */
+#define GTK_SHOT_DEFAULT_PEN_FONT "Sans 10"
+/* The size of pen */
+#define GTK_SHOT_DEFAULT_PEN_SIZE 2
+
 #define GTK_SHOT_PEN(obj) ((GtkShotPen*) obj)
 
-typedef enum _GtkShotPenType{
+enum _GtkShotPenType{
   GTK_SHOT_PEN_RECT,
   GTK_SHOT_PEN_ELLIPSE,
   GTK_SHOT_PEN_ARROW,
   GTK_SHOT_PEN_LINE,
   GTK_SHOT_PEN_TEXT
-} GtkShotPenType;
+};
 
-typedef struct _GtkShotPen GtkShotPen;
 struct _GtkShotPen {
   GtkShotPenType type;
   GdkPoint start, end;

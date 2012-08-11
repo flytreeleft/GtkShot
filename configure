@@ -868,7 +868,6 @@ enable_fast_install
 enable_dependency_tracking
 with_gnu_ld
 enable_libtool_lock
-enable_anchor
 enable_debug
 '
       ac_precious_vars='build_alias
@@ -1514,7 +1513,6 @@ Optional Features:
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
   --disable-libtool-lock  avoid locking (might break parallel builds)
-  --enable-anchor         enable to use anchor to resize area of capture
   --enable-debug          enable to print debug information
 
 Optional Packages:
@@ -4412,13 +4410,13 @@ if test "${lt_cv_nm_interface+set}" = set; then :
 else
   lt_cv_nm_interface="BSD nm"
   echo "int some_variable = 0;" > conftest.$ac_ext
-  (eval echo "\"\$as_me:4415: $ac_compile\"" >&5)
+  (eval echo "\"\$as_me:4413: $ac_compile\"" >&5)
   (eval "$ac_compile" 2>conftest.err)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:4418: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
+  (eval echo "\"\$as_me:4416: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
   (eval "$NM \"conftest.$ac_objext\"" 2>conftest.err > conftest.out)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:4421: output\"" >&5)
+  (eval echo "\"\$as_me:4419: output\"" >&5)
   cat conftest.out >&5
   if $GREP 'External.*some_variable' conftest.out > /dev/null; then
     lt_cv_nm_interface="MS dumpbin"
@@ -5624,7 +5622,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 5627 "configure"' > conftest.$ac_ext
+  echo '#line 5625 "configure"' > conftest.$ac_ext
   if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -7149,11 +7147,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7152: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7150: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7156: \$? = $ac_status" >&5
+   echo "$as_me:7154: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7488,11 +7486,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7491: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7489: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7495: \$? = $ac_status" >&5
+   echo "$as_me:7493: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7593,11 +7591,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7596: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7594: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:7600: \$? = $ac_status" >&5
+   echo "$as_me:7598: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -7648,11 +7646,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7651: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7649: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:7655: \$? = $ac_status" >&5
+   echo "$as_me:7653: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -10032,7 +10030,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 10035 "configure"
+#line 10033 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -10128,7 +10126,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 10131 "configure"
+#line 10129 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11999,50 +11997,6 @@ $as_echo "#define GTK_SHOT_VERSION \"${PACKAGE_VERSION}\"" >>confdefs.h
 
 
 $as_echo "#define SYSTEM_CURSOR_SIZE 16" >>confdefs.h
-
-
-$as_echo "#define GTK_SHOT_ANCHOR_BORDER 6" >>confdefs.h
-
-
-$as_echo "#define GTK_SHOT_SECTION_BORDER 2" >>confdefs.h
-
-
-$as_echo "#define GTK_SHOT_SECTION_COLOR 0x00ff00" >>confdefs.h
-
-
-$as_echo "#define GTK_SHOT_OPACITY 0.8" >>confdefs.h
-
-
-$as_echo "#define GTK_SHOT_COLOR 0x000000" >>confdefs.h
-
-
-$as_echo "#define GTK_SHOT_DEFAULT_PEN_FONT \"Sans 10\"" >>confdefs.h
-
-
-$as_echo "#define GTK_SHOT_DEFAULT_PEN_COLOR 0xff0000" >>confdefs.h
-
-
-$as_echo "#define GTK_SHOT_DEFAULT_PEN_SIZE 2" >>confdefs.h
-
-
-# Check whether --enable-anchor was given.
-if test "${enable_anchor+set}" = set; then :
-  enableval=$enable_anchor; case "${enableval}" in
-                yes) enable_anchor=yes ;;
-                no) enable_anchor=no ;;
-                *) as_fn_error $? "bad value \"${enableval}\" for --enable-anchor, use \"yes\" (default) or \"no\"." "$LINENO" 5  ;;
-               esac
-else
-  enable_anchor=yes
-fi
-
-if test "x${enable_anchor}" = "xyes" ; then
-  no_anchor=0
-else
-  no_anchor=1
-fi
-
-$as_echo "#define GTK_SHOT_NO_ANCHOR ${no_anchor}" >>confdefs.h
 
 
 # Check whether --enable-debug was given.

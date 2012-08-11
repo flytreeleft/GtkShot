@@ -1,37 +1,10 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
-/* The border of anchor */
-#undef GTK_SHOT_ANCHOR_BORDER
-
-/* The color of mask */
-#undef GTK_SHOT_COLOR
-
 /* Print debug information when programme is running */
 #undef GTK_SHOT_DEBUG
 
-/* The color of pen */
-#undef GTK_SHOT_DEFAULT_PEN_COLOR
-
-/* The font name of pen */
-#undef GTK_SHOT_DEFAULT_PEN_FONT
-
-/* The size of pen */
-#undef GTK_SHOT_DEFAULT_PEN_SIZE
-
 /* The name of programme */
 #undef GTK_SHOT_NAME
-
-/* Whether using anchor around area of caputure */
-#undef GTK_SHOT_NO_ANCHOR
-
-/* The opacity of mask */
-#undef GTK_SHOT_OPACITY
-
-/* The border of selection of capture */
-#undef GTK_SHOT_SECTION_BORDER
-
-/* The color of selection of capture */
-#undef GTK_SHOT_SECTION_COLOR
 
 /* The version of programme */
 #undef GTK_SHOT_VERSION

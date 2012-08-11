@@ -26,9 +26,11 @@
 extern "C" {
 #endif
 
+typedef struct _GtkShotPenEditor GtkShotPenEditor;
+
 #define GTK_SHOT_PEN_EDITOR(obj)  ((GtkShotPenEditor*) obj)
 
-typedef struct _GtkShotPenEditor {
+struct _GtkShotPenEditor {
   GtkWindow *window;
 
   GtkShotPen *pen;
@@ -40,9 +42,9 @@ typedef struct _GtkShotPenEditor {
   // 当前设置的画笔属性
   gint size, color;
   gchar *fontname;
-} GtkShotPenEditor;
+};
 
-GtkShotPenEditor* gtk_shot_pen_editor_new(GtkWindow *parent);
+GtkShotPenEditor* gtk_shot_pen_editor_new(GtkShot *shot);
 void gtk_shot_pen_editor_show(GtkShotPenEditor *editor);
 void gtk_shot_pen_editor_hide(GtkShotPenEditor *editor);
 void gtk_shot_pen_editor_set_pen(GtkShotPenEditor *editor

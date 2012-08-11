@@ -21,6 +21,7 @@
 
 #include "utils.h"
 
+#include "shot.h"
 #include "input.h"
 
 // Events
@@ -29,29 +30,16 @@ static gboolean on_input_window_expose(GtkWidget *widget
 static void on_input_window_show(GtkWidget *widget
                                       , gpointer data);
 
-GtkShotInput* gtk_shot_input_new(GtkWindow *parent) {
+GtkShotInput* gtk_shot_input_new(GtkShot *shot) {
+  gint width = 300, height = 80;
   GtkShotInput *input = g_new(GtkShotInput, 1);
+  GtkWindow *window =
+      create_popup_window(GTK_WINDOW(shot), width, height);
 
-  GtkWindow *window = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
-  gtk_window_set_transient_for(window, parent);
-  gtk_widget_set_can_focus(GTK_WIDGET(window), TRUE);
-  gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
-  gtk_window_set_skip_taskbar_hint(GTK_WINDOW(window), TRUE);
-  gtk_window_set_resizable(window, FALSE);
   gtk_container_set_border_width(GTK_CONTAINER(window), 0);
-  /*gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
-  // 背景可透明
-  GdkScreen *screen = gtk_widget_get_screen(GTK_WIDGET(window));
-  GdkColormap *colormap = gdk_screen_get_rgba_colormap(screen);
-  gtk_widget_set_colormap(GTK_WIDGET(window), colormap);
-  g_signal_connect(G_OBJECT(window), "expose_event"
-                      , G_CALLBACK(on_input_window_expose)
-                      , NULL);*/
-  /*g_signal_connect(G_OBJECT(window), "show"
-                      , G_CALLBACK(on_input_window_show)
-                      , NULL);*/
 
-  GtkAlignment *align = GTK_ALIGNMENT(gtk_alignment_new(0, 0, 0, 0));
+  GtkAlignment *align =
+                GTK_ALIGNMENT(gtk_alignment_new(0, 0, 0, 0));
   gtk_alignment_set_padding(align, 0, 1, 0, 1);
 
   GtkScrolledWindow *scroll
@@ -61,7 +49,7 @@ GtkShotInput* gtk_shot_input_new(GtkWindow *parent) {
                                         , GTK_POLICY_ALWAYS);
 
   GtkTextView *view = GTK_TEXT_VIEW(gtk_text_view_new());
-  gtk_widget_set_size_request(GTK_WIDGET(view), 300, 80);
+  gtk_widget_set_size_request(GTK_WIDGET(view), width, height);
 
   gtk_container_add(GTK_CONTAINER(scroll), GTK_WIDGET(view));
   gtk_container_add(GTK_CONTAINER(align), GTK_WIDGET(scroll));
@@ -117,7 +105,9 @@ gchar* gtk_shot_input_get_text(GtkShotInput *input) {
   gtk_text_buffer_get_start_iter(buffer, &start);
   gtk_text_buffer_get_end_iter(buffer, &end);
 
-  return g_strstrip(gtk_text_buffer_get_text(buffer, &start, &end, FALSE));
+  return g_strstrip(gtk_text_buffer_get_text(buffer
+                                                , &start, &end
+                                                , FALSE));
 }
 
 gboolean on_input_window_expose(GtkWidget *widget, gpointer data) {
@@ -136,18 +126,4 @@ gboolean on_input_window_expose(GtkWidget *widget, gpointer data) {
   cairo_destroy(cr);
 
   return TRUE;
-}
-
-/**
- * For POPUP window's FOCUS
- * Reference:
- * http://stackoverflow.com/questions/1925568/how-to-give-keyboard-focus-to-a-pop-up-gtk-window
- */
-void on_input_window_show(GtkWidget *widget, gpointer data) {
-  /* grabbing might not succeed immediately */
-  while (gdk_keyboard_grab(widget->window, FALSE, GDK_CURRENT_TIME)
-          != GDK_GRAB_SUCCESS) {
-    /* wait a while and try again */
-    sleep(0.1);
-  }
 }

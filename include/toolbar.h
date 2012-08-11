@@ -24,19 +24,21 @@
 extern "C" {
 #endif
 
+typedef struct _GtkShotToolbar GtkShotToolbar;
+
 #define GTK_SHOT_TOOLBAR(obj) ((GtkShotToolbar*) obj)
 
-typedef struct _GtkShotToolbar {
+struct _GtkShotToolbar {
   GtkWindow *window;
   GtkBox *pen_box, *op_box;
   GSList *buttons, *toggle_buttons;
   gint x, y;
   gint width, height;
 
-  struct _GtkShot *shot;
-} GtkShotToolbar;
+  GtkShot *shot;
+};
 
-GtkShotToolbar* gtk_shot_toolbar_new(GtkWindow *parent);
+GtkShotToolbar* gtk_shot_toolbar_new(GtkShot *shot);
 void gtk_shot_toolbar_show(GtkShotToolbar *toolbar);
 void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar);
 

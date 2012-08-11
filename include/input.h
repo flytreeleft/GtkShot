@@ -24,14 +24,16 @@
 extern "C" {
 #endif
 
+typedef struct _GtkShotInput GtkShotInput;
+
 #define GTK_SHOT_INPUT(obj) ((GtkShotInput*) obj)
 
-typedef struct _GtkShotInput {
+struct _GtkShotInput {
   GtkWindow *window;
   GtkTextView *view;
-} GtkShotInput;
+};
 
-GtkShotInput* gtk_shot_input_new(GtkWindow *parent);
+GtkShotInput* gtk_shot_input_new(GtkShot *shot);
 void gtk_shot_input_show(GtkShotInput *input, gint x, gint y);
 void gtk_shot_input_hide(GtkShotInput *input);
 void gtk_shot_input_set_font(GtkShotInput *input

@@ -45,12 +45,19 @@ extern "C" {
 #define RGB_G(rgb) ( ((rgb) & 0x00ff00) >> 8 )
 #define RGB_B(rgb) ( ((rgb) & 0x0000ff) >> 0 )
 
+/** 在BOX中加入控件,并取消控件的可聚焦性,防止按钮上出现TAB键切换聚焦的虚线 */
 #define pack_to_box(box, thing) \
-          gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(thing), FALSE, FALSE, 0)
+        do { \
+          gtk_widget_set_can_focus(GTK_WIDGET(thing), FALSE); \
+          gtk_box_pack_start(GTK_BOX(box), GTK_WIDGET(thing), FALSE, FALSE, 0); \
+        } while(0);
 void parse_to_gdk_color(gint color, GdkColor *c);
 #define parse_gdk_color(c) \
           RGB((c).red & 0xff, (c).green & 0xff, (c).blue & 0xff)
-gchar* choose_and_get_filename(GtkWindow *parent, char **type);
+gchar* choose_and_get_filename(GtkWindow *parent, char **type
+                                  , const char *path);
+GtkWindow* create_popup_window(GtkWindow *parent
+                                  , gint width, gint height);
 GtkWidget* create_icon_button(const char *icon, const char *tip
                                 , GCallback cb, gboolean toggle
                                 , gpointer data);
