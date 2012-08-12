@@ -133,6 +133,7 @@ void gtk_shot_init(GtkShot *shot) {
   shot->pen_editor = gtk_shot_pen_editor_new(shot);
   shot->toolbar = gtk_shot_toolbar_new(shot);
   shot->input = gtk_shot_input_new(shot);
+  shot->screen_pixbuf = NULL;
   shot->quit = NULL; // function
   shot->dblclick = NULL; // function
 
@@ -149,10 +150,6 @@ void gtk_shot_init(GtkShot *shot) {
   shot->x = shot->y = 0;
   shot->width = gdk_screen_get_width(screen);
   shot->height = gdk_screen_get_height(screen);
-  shot->screen_pixbuf =
-                get_screen_pixbuf(shot->x, shot->y
-                                      , shot->width
-                                      , shot->height);
   shot->mask_surface =
                 cairo_image_surface_create(CAIRO_FORMAT_ARGB32
                                                 , shot->width
@@ -296,6 +293,9 @@ void gtk_shot_save_section_to_clipboard(GtkShot *shot) {
 void gtk_shot_hide(GtkShot *shot) {
   g_return_if_fail(IS_GTK_SHOT(shot));
 
+  if (!gtk_widget_get_visible(GTK_WIDGET(shot))) {
+    return;
+  }
   gtk_widget_hide_all(GTK_WIDGET(shot));
   gtk_shot_hide_toolbar(shot);
   gtk_shot_input_hide(shot->input);
@@ -304,7 +304,19 @@ void gtk_shot_hide(GtkShot *shot) {
 void gtk_shot_show(GtkShot *shot, gboolean clean) {
   g_return_if_fail(IS_GTK_SHOT(shot));
 
-  if (clean) gtk_shot_clean_section(shot);
+  if (gtk_widget_get_visible(GTK_WIDGET(shot))) {
+    return;
+  }
+  if (clean) {
+    gtk_shot_clean_section(shot);
+    // 清除上次的截图
+    g_object_unref(shot->screen_pixbuf);
+    shot->screen_pixbuf =
+          get_screen_pixbuf(shot->x, shot->y
+                                    , shot->width
+                                    , shot->height);
+    shot->mode = NORMAL_MODE;
+  }
   gtk_widget_show(GTK_WIDGET(shot));
 }
 
@@ -603,6 +615,7 @@ gboolean on_shot_key_press(GtkWidget *widget
 }
 
 void gtk_shot_draw_screen(GtkShot *shot, cairo_t *cr) {
+  g_return_if_fail(shot->screen_pixbuf != NULL);
   gdk_cairo_set_source_pixbuf(cr, shot->screen_pixbuf
                                 , 0, 0);
   cairo_paint(cr);
@@ -682,6 +695,7 @@ void gtk_shot_clean_historic_pen(GtkShot *shot) {
     gtk_shot_pen_free(GTK_SHOT_PEN(l->data));
   }
   g_slist_free(shot->historic_pen);
+  shot->historic_pen = NULL;
 }
 
 void gtk_shot_move_section(GtkShot *shot, gint x, gint y) {

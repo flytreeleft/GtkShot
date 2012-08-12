@@ -95,6 +95,7 @@ void gtk_shot_toolbar_show(GtkShotToolbar *toolbar) {
 void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar) {
   g_return_if_fail(toolbar != NULL);
 
+  // TODO 取消所有按钮的激活态
   gtk_widget_hide_all(GTK_WIDGET(toolbar->window));
 }
 

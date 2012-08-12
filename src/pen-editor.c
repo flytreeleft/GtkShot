@@ -144,6 +144,7 @@ void gtk_shot_pen_editor_show(GtkShotPenEditor *editor) {
 void gtk_shot_pen_editor_hide(GtkShotPenEditor *editor) {
   g_return_if_fail(editor != NULL);
 
+  // TODO 取消所有按钮的激活态
   gtk_widget_hide_all(GTK_WIDGET(editor->window));
 }
 
