@@ -39,6 +39,7 @@ struct _GtkShotToolbar {
 };
 
 GtkShotToolbar* gtk_shot_toolbar_new(GtkShot *shot);
+void gtk_shot_toolbar_destroy(GtkShotToolbar *toolbar);
 void gtk_shot_toolbar_show(GtkShotToolbar *toolbar);
 void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar);
 

@@ -60,6 +60,14 @@ GtkShotInput* gtk_shot_input_new(GtkShot *shot) {
   return input;
 }
 
+void gtk_shot_input_destroy(GtkShotInput *input) {
+  g_return_if_fail(input != NULL);
+
+  gtk_widget_destroy(GTK_WIDGET(input->window));
+
+  g_free(input);
+}
+
 void gtk_shot_input_show(GtkShotInput *input, gint x, gint y) {
   g_return_if_fail(input != NULL);
 

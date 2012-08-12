@@ -34,6 +34,7 @@ struct _GtkShotInput {
 };
 
 GtkShotInput* gtk_shot_input_new(GtkShot *shot);
+void gtk_shot_input_destroy(GtkShotInput *input);
 void gtk_shot_input_show(GtkShotInput *input, gint x, gint y);
 void gtk_shot_input_hide(GtkShotInput *input);
 void gtk_shot_input_set_font(GtkShotInput *input

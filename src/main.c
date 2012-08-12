@@ -37,6 +37,7 @@ static GtkShot *shot = NULL;
 static void wake_up(gint signo);
 static void exit_clean(gint signo);
 static void quit();
+static void save_to_clipboard();
 static void remove_lock_file();
 static gint new_lock_file();
 
@@ -58,8 +59,10 @@ int main(int argc, char *argv[]) {
 
   shot = gtk_shot_new();
   shot->quit = quit;
+  shot->dblclick = save_to_clipboard;
   gtk_shot_show(shot, TRUE);
 
+  //gtk_shot_destroy(shot);
   gtk_main();
 
   return 0;
@@ -81,6 +84,15 @@ void quit() {
   remove_lock_file();
   gtk_main_quit();
   exit(0);
+}
+
+void save_to_clipboard() {
+  if (gtk_shot_has_visible_section(shot)) {
+    gtk_shot_save_section_to_clipboard(shot);
+    gtk_shot_hide(shot);
+  } else {
+    gtk_shot_quit(shot);
+  }
 }
 
 void remove_lock_file() {

@@ -32,9 +32,6 @@
 #define IS_IN_RECT(x, y, x0, y0, w, h, border) \
           ( ((x) > ((x0) + (border)) && (x) < ((x0) + (w) - (border))) \
             && ((y) > ((y0) + (border)) && (y) < ((y0) + (h) - (border))) )
-#define HAS_VISIBLE_SECTION(section) \
-          ( (section).width > 2 * (section).border \
-              && (section).height > 2 * (section).border )
 
 // 鼠标位置与鼠标类型的映射
 static GdkCursorType cursor_pos_type[] = {
@@ -70,6 +67,7 @@ static gboolean on_shot_key_press(GtkWidget *widget
 static void gtk_shot_draw_screen(GtkShot *shot, cairo_t *cr);
 static void gtk_shot_draw_section(GtkShot *shot, cairo_t *cr);
 static void gtk_shot_clean_section(GtkShot *shot);
+static void gtk_shot_clean_historic_pen(GtkShot *shot);
 static void gtk_shot_move_section(GtkShot *shot, gint x, gint y);
 static void gtk_shot_resize_section(GtkShot *shot, gint x, gint y);
 static void gtk_shot_adjust_section(GtkShot *shot, gint x0, gint y0
@@ -114,6 +112,7 @@ void gtk_shot_class_init(GtkShotClass *klass) {
 void gtk_shot_init(GtkShot *shot) {
   // 内部数据的初始化
   shot->mode = NORMAL_MODE;
+  shot->dynamic = FALSE;
   shot->opacity = GTK_SHOT_OPACITY;
   shot->color = GTK_SHOT_COLOR;
   shot->anchor_border = GTK_SHOT_ANCHOR_BORDER;
@@ -135,6 +134,7 @@ void gtk_shot_init(GtkShot *shot) {
   shot->toolbar = gtk_shot_toolbar_new(shot);
   shot->input = gtk_shot_input_new(shot);
   shot->quit = NULL; // function
+  shot->dblclick = NULL; // function
 
   gtk_window_set_title(GTK_WINDOW(shot), GTK_SHOT_NAME);
   gtk_window_set_decorated(GTK_WINDOW(shot), FALSE);
@@ -175,7 +175,9 @@ void gtk_shot_init(GtkShot *shot) {
                                 | GDK_POINTER_MOTION_MASK
                                 | GDK_POINTER_MOTION_HINT_MASK
                                 | GDK_BUTTON_PRESS_MASK
-                                | GDK_BUTTON_RELEASE_MASK);
+                                | GDK_BUTTON_RELEASE_MASK
+                                | GDK_KEY_PRESS_MASK
+                                | GDK_KEY_RELEASE_MASK);
 }
 
 GtkShot* gtk_shot_new(/* some arguments */) {
@@ -183,8 +185,6 @@ GtkShot* gtk_shot_new(/* some arguments */) {
   GdkWindowAttr attr;
 
   shot = g_object_new(GTK_SHOT_TYPE, NULL);
-  // POPUP window
-  //GTK_WINDOW(shot)->type = GTK_WINDOW_POPUP;
   // 处理参数
   // ...
 
@@ -193,15 +193,39 @@ GtkShot* gtk_shot_new(/* some arguments */) {
 // End of GObject-related stuff
 
 void gtk_shot_finalize(GObject *obj) {
-  GtkShot *shot;
-
-  g_return_if_fail(obj != NULL);
   g_return_if_fail(IS_GTK_SHOT(obj));
 
-  shot = GTK_SHOT(obj);
+  GtkShot *shot = GTK_SHOT(obj);
   // 做些清理工作
-  // ...
+  g_object_unref(shot->screen_pixbuf);
+  shot->screen_pixbuf = NULL;
+  cairo_surface_destroy(shot->mask_surface);
+  shot->mask_surface = NULL;
+  gtk_shot_pen_free(shot->pen);
+  shot->pen = NULL;
+  gtk_shot_clean_historic_pen(shot);
+  shot->historic_pen = NULL;
+  gtk_shot_pen_editor_destroy(shot->pen_editor);
+  shot->pen_editor = NULL;
+  gtk_shot_toolbar_destroy(shot->toolbar);
+  shot->toolbar = NULL;
+  gtk_shot_input_destroy(shot->input);
+  shot->input = NULL;
+#ifdef GTK_SHOT_DEBUG
   debug("quit!\n");
+#endif
+}
+
+void gtk_shot_destroy(GtkShot *shot) {
+  g_return_if_fail(IS_GTK_SHOT(shot));
+
+  gtk_widget_destroy(GTK_WIDGET(shot));
+}
+
+gboolean gtk_shot_has_visible_section(GtkShot *shot) {
+  return IS_GTK_SHOT(shot)
+            && shot->section.width > 2 * shot->section.border
+              && shot->section.height > 2 * shot->section.border;
 }
 
 void gtk_shot_get_section(GtkShot *shot, gint *x0, gint *y0
@@ -223,22 +247,32 @@ void gtk_shot_get_section(GtkShot *shot, gint *x0, gint *y0
 }
 
 GdkPixbuf* gtk_shot_get_section_pixbuf(GtkShot *shot) {
-  GdkPixbuf *pixbuf = NULL;
+  g_return_val_if_fail(IS_GTK_SHOT(shot), NULL);
 
-  g_return_if_fail(IS_GTK_SHOT(shot));
 #ifdef GTK_SHOT_DEBUG
   debug("screen shot(%d, %d: %d, %d)\n"
                   , shot->section.x, shot->section.y
                   , shot->section.width, shot->section.height);
 #endif
-  if (HAS_VISIBLE_SECTION(shot->section)) {
-    gint x0, y0, x1, y1;
-    gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
+  if (!gtk_shot_has_visible_section(shot)) {
+    return NULL;
+  }
+  GdkPixbuf *pixbuf = NULL;
+  gint x0, y0, x1, y1;
+  gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
+  if (shot->dynamic) {
+    // 获取屏幕上的截图
     pixbuf = get_screen_pixbuf(x0, y0, x1 - x0, y1 - y0);
   } else {
-    debug("no selected screen area...\n");
+    // 获取背景上的截图
+    pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8
+                                , x1 - x0, y1 - y0);
+    gdk_pixbuf_copy_area(shot->screen_pixbuf
+                            , x0, y0
+                            , x1 - x0, y1 - y0
+                            , pixbuf
+                            , 0, 0);
   }
-
   return pixbuf;
 }
 
@@ -257,6 +291,7 @@ void gtk_shot_save_section_to_clipboard(GtkShot *shot) {
   g_return_if_fail(pixbuf != NULL);
 
   save_pixbuf_to_clipboard(pixbuf);
+  g_object_unref(pixbuf);
 }
 
 void gtk_shot_hide(GtkShot *shot) {
@@ -294,7 +329,7 @@ void gtk_shot_hide_toolbar(GtkShot *shot) {
 void gtk_shot_show_toolbar(GtkShot *shot) {
   g_return_if_fail(IS_GTK_SHOT(shot));
 
-  if (HAS_VISIBLE_SECTION(shot->section)) {
+  if (gtk_shot_has_visible_section(shot)) {
     gtk_shot_adjust_toolbar(shot);
     gtk_shot_toolbar_show(shot->toolbar);
   }
@@ -378,7 +413,9 @@ gboolean on_shot_expose(GtkWidget *widget
   cairo_t *cr, *mask_cr;
 
   cr = gdk_cairo_create(gtk_widget_get_window(widget));
-  cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+  cairo_set_operator(cr, shot->dynamic ?
+                            CAIRO_OPERATOR_SOURCE
+                            : CAIRO_OPERATOR_OVER);
 
   mask_cr = cairo_create(shot->mask_surface);
   cairo_set_operator(mask_cr, CAIRO_OPERATOR_SOURCE);
@@ -406,13 +443,8 @@ gboolean on_shot_button_press(GtkWidget *widget
               , event->x, event->y);
 #endif
   if (event->type == GDK_2BUTTON_PRESS) {
-    shot->mode = SAVE_MODE;
-
-    if (HAS_VISIBLE_SECTION(shot->section)) {
-      gtk_shot_save_section_to_clipboard(shot);
-      gtk_shot_hide(shot);
-    } else {
-      gtk_shot_quit(shot);
+    if (shot->dblclick) {
+      shot->dblclick();
     }
   } else if (event->type == GDK_BUTTON_PRESS) {
     gdk_point_assign(shot->move_start, *event);
@@ -567,7 +599,8 @@ gboolean on_shot_motion_notify(GtkWidget *widget
 
 gboolean on_shot_key_press(GtkWidget *widget
                                 , GdkEventKey *event) {
-  return FALSE;
+  debug("key: %s\n", gdk_keyval_name(event->keyval));
+  return TRUE;
 }
 
 void gtk_shot_draw_screen(GtkShot *shot, cairo_t *cr) {
@@ -641,7 +674,10 @@ void gtk_shot_clean_section(GtkShot *shot) {
   shot->section.width = shot->section.height = 0;
 
   gtk_shot_remove_pen(shot);
+  gtk_shot_clean_historic_pen(shot);
+}
 
+void gtk_shot_clean_historic_pen(GtkShot *shot) {
   GSList *l = shot->historic_pen;
   for (l; l; l = l->next) {
     gtk_shot_pen_free(GTK_SHOT_PEN(l->data));

@@ -104,6 +104,14 @@ GtkShotPenEditor* gtk_shot_pen_editor_new(GtkShot *shot) {
   return editor;
 }
 
+void gtk_shot_pen_editor_destroy(GtkShotPenEditor *editor) {
+  g_return_if_fail(editor != NULL);
+
+  gtk_widget_destroy(GTK_WIDGET(editor->window));
+
+  g_free(editor);
+}
+
 void gtk_shot_pen_editor_show(GtkShotPenEditor *editor) {
   g_return_if_fail(editor != NULL);
   if (!editor->pen) return;

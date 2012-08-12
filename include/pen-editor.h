@@ -45,6 +45,7 @@ struct _GtkShotPenEditor {
 };
 
 GtkShotPenEditor* gtk_shot_pen_editor_new(GtkShot *shot);
+void gtk_shot_pen_editor_destroy(GtkShotPenEditor *editor);
 void gtk_shot_pen_editor_show(GtkShotPenEditor *editor);
 void gtk_shot_pen_editor_hide(GtkShotPenEditor *editor);
 void gtk_shot_pen_editor_set_pen(GtkShotPenEditor *editor

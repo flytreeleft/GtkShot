@@ -77,6 +77,14 @@ GtkShotToolbar* gtk_shot_toolbar_new(GtkShot *shot) {
   return toolbar;
 }
 
+void gtk_shot_toolbar_destroy(GtkShotToolbar *toolbar) {
+  g_return_if_fail(toolbar != NULL);
+
+  gtk_widget_destroy(GTK_WIDGET(toolbar->window));
+
+  g_free(toolbar);
+}
+
 void gtk_shot_toolbar_show(GtkShotToolbar *toolbar) {
   g_return_if_fail(toolbar != NULL);
 

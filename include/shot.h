@@ -110,6 +110,7 @@ struct _GtkShot {
   cairo_surface_t *mask_surface; // 遮罩层
 
   GtkShotMode mode;
+  gboolean dynamic; // 是否动态截图
   gint width, height; // 窗口的宽度和高度
   gint x, y; // 窗口的起始位置坐标
   gdouble opacity;  // 窗口透明度
@@ -129,10 +130,12 @@ struct _GtkShot {
   GtkShotInput *input; // 文本输入窗口
 
   // FUNCTION
+  void (*dblclick)();
   void (*quit)();
 };
 
 GtkShot* gtk_shot_new();
+void gtk_shot_destroy(GtkShot *shot);
 
 void gtk_shot_hide(GtkShot *shot);
 void gtk_shot_show(GtkShot *shot, gboolean clean);
@@ -142,6 +145,7 @@ void gtk_shot_hide_toolbar(GtkShot *shot);
 void gtk_shot_show_toolbar(GtkShot *shot);
 #define gtk_shot_refresh(shot) \
             gdk_window_invalidate_rect(GTK_WIDGET(shot)->window, NULL, FALSE)
+gboolean gtk_shot_has_visible_section(GtkShot *shot);
 void gtk_shot_get_section(GtkShot *shot
                               , gint *x0, gint *y0
                               , gint *x1, gint *y1);
