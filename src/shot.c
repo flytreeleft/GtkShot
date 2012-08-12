@@ -264,14 +264,13 @@ GdkPixbuf* gtk_shot_get_section_pixbuf(GtkShot *shot) {
     // 获取屏幕上的截图
     pixbuf = get_screen_pixbuf(x0, y0, x1 - x0, y1 - y0);
   } else {
-    // 获取背景上的截图
-    pixbuf = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8
-                                , x1 - x0, y1 - y0);
-    gdk_pixbuf_copy_area(shot->screen_pixbuf
-                            , x0, y0
-                            , x1 - x0, y1 - y0
-                            , pixbuf
-                            , 0, 0);
+    // 获取窗口上的截图和涂鸦
+    pixbuf =
+      gdk_pixbuf_get_from_drawable(NULL
+                                    , GTK_WIDGET(shot)->window
+                                    , NULL
+                                    , x0, y0, 0, 0
+                                    , x1 - x0, y1 - y0);
   }
   return pixbuf;
 }
@@ -395,11 +394,11 @@ void gtk_shot_save_pen(GtkShot *shot, gboolean reset) {
   }
 }
 
-/** 撤销最后一个历史画笔 */
+/** 撤销最后加入的历史画笔 */
 void gtk_shot_undo_pen(GtkShot *shot) {
   g_return_if_fail(IS_GTK_SHOT(shot));
   if (shot->historic_pen) {
-    GSList *l = shot->historic_pen;
+    GSList *l = g_slist_last(shot->historic_pen);
 
     gtk_shot_pen_free(GTK_SHOT_PEN(l->data));
     shot->historic_pen =
