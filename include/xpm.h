@@ -18,6 +18,7 @@
 #ifndef _GTK_SHOT_XPM_H_
 #define _GTK_SHOT_XPM_H_
 
+#include "images/gtkshot.xpm"
 #include "images/save.xpm"
 #include "images/done.xpm"
 #include "images/quit.xpm"

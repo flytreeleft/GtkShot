@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <math.h>
 
 #include <glib/gi18n.h>
 
@@ -209,9 +210,78 @@ void popup_message_dialog(GtkWindow *parent, const char *msg) {
   gtk_widget_destroy(msg_dlg);
 }
 
-GdkPixbuf* get_screen_pixbuf(gint x, gint y, gint width, gint height) {
-  GdkWindow *root = gdk_get_default_root_window();
-  return gdk_pixbuf_get_from_drawable(NULL, root, NULL
-                                          , x, y, 0, 0
-                                          , width, height);
+void save_pixbuf_to_clipboard(GdkPixbuf *pixbuf) {
+  GtkClipboard *clipboard =
+                gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+  gtk_clipboard_set_image(clipboard, pixbuf);
+  gtk_clipboard_set_can_store(clipboard, NULL, 0);
+  gtk_clipboard_store(clipboard);
+}
+
+/** 取消所有按钮的激活状态 */
+void set_all_toggle_button_inactive(GList *list) {
+  GtkToggleButton *b = NULL;
+
+  for (; list; list = list->next) {
+    b = GTK_TOGGLE_BUTTON(list->data);
+    if (b->active) {
+      gtk_toggle_button_set_active(b, FALSE);
+    }
+  }
+}
+
+/** 获取指定按钮以外的第一个激活的按钮 */
+GtkToggleButton*
+  get_active_toggle_button_except(GList *list
+                                    , GtkToggleButton *btn) {
+  GtkToggleButton *b = NULL;
+
+  for (; list; list = list->next) {
+    b = GTK_TOGGLE_BUTTON(list->data);
+    if (b != btn && b->active) {
+      break;
+    } else {
+      b = NULL;
+    }
+  }
+  return b;
+}
+
+void cairo_draw_text(cairo_t *cr, char *text, char *fontname) {
+  // Thanks deepin-screenshot START
+  PangoLayout *layout = pango_cairo_create_layout(cr);
+  PangoFontDescription *desc
+        = pango_font_description_from_string(fontname);
+  pango_layout_set_text(layout, text, -1);
+  pango_layout_set_font_description(layout, desc);
+  pango_font_description_free(desc);
+
+  pango_cairo_update_layout(cr, layout);
+  pango_cairo_show_layout(cr, layout);
+  // Thanks deepin-screenshot END
+}
+
+void cairo_round_rect(cairo_t *cr, gfloat x, gfloat y
+                                  , gfloat width, gfloat height
+                                  , gfloat radius) {
+  cairo_move_to(cr, x + radius, y);
+  cairo_line_to(cr, x + width - radius, y);
+      
+  cairo_move_to(cr, x + width, y + radius);
+  cairo_line_to(cr, x + width, y + height - radius);
+
+  cairo_move_to(cr, x + width - radius, y + height);
+  cairo_line_to(cr, x + radius, y + height);
+
+  cairo_move_to(cr, x, y + height - radius);
+  cairo_line_to(cr, x, y + radius);
+
+  cairo_arc(cr, x + radius, y + radius, radius
+                      , M_PI, 3 * M_PI / 2);
+  cairo_arc(cr, x + width - radius, y + radius, radius
+                      , 3 * M_PI / 2, 2 * M_PI);
+  cairo_arc(cr, x + width - radius, y + height - radius, radius
+                      , 2 * M_PI, M_PI / 2);
+  cairo_arc(cr, x + radius, y + height - radius, radius
+                      , M_PI / 2, M_PI);
 }

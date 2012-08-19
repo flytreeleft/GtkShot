@@ -78,39 +78,33 @@ GtkShotToolbar* gtk_shot_toolbar_new(GtkShot *shot) {
 }
 
 void gtk_shot_toolbar_destroy(GtkShotToolbar *toolbar) {
-  g_return_if_fail(toolbar != NULL);
+  g_return_if_fail(toolbar);
 
   gtk_widget_destroy(GTK_WIDGET(toolbar->window));
-
   g_free(toolbar);
 }
 
 void gtk_shot_toolbar_show(GtkShotToolbar *toolbar) {
-  g_return_if_fail(toolbar != NULL);
+  g_return_if_fail(toolbar);
 
   gtk_widget_show_all(GTK_WIDGET(toolbar->window));
   gtk_window_move(toolbar->window, toolbar->x, toolbar->y);
 }
 
 void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar) {
-  g_return_if_fail(toolbar != NULL);
+  g_return_if_fail(toolbar);
 
-  // TODO 取消所有按钮的激活态
+  // 取消所有按钮的激活态
+  GList *l = gtk_container_get_children(GTK_CONTAINER(toolbar->pen_box));
+  set_all_toggle_button_inactive(l);
   gtk_widget_hide_all(GTK_WIDGET(toolbar->window));
 }
 
 gboolean on_change_pen(GtkToggleButton *btn
                                 , GtkShotToolbar *toolbar) {
-  GList *l =
-        gtk_container_get_children(GTK_CONTAINER(toolbar->pen_box));
-  GtkToggleButton *act = NULL;
+  GList *l = gtk_container_get_children(GTK_CONTAINER(toolbar->pen_box));
   // 查找其他已激活按钮(只会有一个)
-  for (; l; l = l->next) {
-    GtkToggleButton *b = GTK_TOGGLE_BUTTON(l->data);
-    if (b != btn && b->active) {
-      act = b; break;
-    }
-  }
+  GtkToggleButton *act = get_active_toggle_button_except(l, btn);
 
   if (!btn->active && !act) {
     // 没有已激活的按钮,则移除画笔
@@ -129,7 +123,13 @@ gboolean on_change_pen(GtkToggleButton *btn
 }
 
 gboolean on_undo(GtkButton *btn, GtkShotToolbar *toolbar) {
+  g_return_val_if_fail(!gtk_shot_has_empty_historic_pen(toolbar->shot), FALSE);
+
   gtk_shot_undo_pen(toolbar->shot);
+  /*if (gtk_shot_has_empty_historic_pen(toolbar->shot)) {
+    GList *l = gtk_container_get_children(GTK_CONTAINER(toolbar->pen_box));
+    set_all_toggle_button_inactive(l);
+  }*/
   gtk_shot_refresh(toolbar->shot);
 
   return TRUE;
@@ -142,7 +142,7 @@ gboolean on_save_to_file(GtkButton *btn, GtkShotToolbar *toolbar) {
   gchar *filename =
         choose_and_get_filename(GTK_WINDOW(toolbar->shot)
                                     , &type, NULL);
-  if (filename != NULL) {
+  if (filename) {
     GError *error = NULL;
     succ = gdk_pixbuf_save(pixbuf, filename, type
                                   , &error, NULL);

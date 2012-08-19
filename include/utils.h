@@ -36,9 +36,7 @@ extern "C" {
   #define ABS(x) ((x) < 0 ? -(x) : (x))
 #endif
 /**
- * cairo在的RGB颜色值设置时需为浮点型,
- * 类型转换时会出现精度损失,造成所绘颜色的不一致,
- * 需对R/G/B值分别除以255.0
+ * cairo的RGB颜色值为0 ~ 1, 需对R/G/B值分别除以255.0
  */
 #define RGB(r, g, b) ( ((r) << 16) | ((g) << 8) | ((b) << 0) )
 #define RGB_R(rgb) ( ((rgb) & 0xff0000) >> 16 )
@@ -72,7 +70,15 @@ GtkWidget* create_color_button(gint color, gint width, gint height
                                   , GCallback cb, gboolean toggle
                                   , gpointer data);
 void popup_message_dialog(GtkWindow *parent, const char *msg);
-GdkPixbuf* get_screen_pixbuf(gint x, gint y, gint width, gint height);
+void save_pixbuf_to_clipboard(GdkPixbuf *pixbuf);
+void set_all_toggle_button_inactive(GList *list);
+GtkToggleButton*
+    get_active_toggle_button_except(GList *list
+                                      , GtkToggleButton *btn);
+void cairo_draw_text(cairo_t *cr, char *text, char *fontname);
+void cairo_round_rect(cairo_t *cr, gfloat x, gfloat y
+                                  , gfloat width, gfloat height
+                                  , gfloat radius);
 /**
  * 仅设置Toggle按钮的激活状态,但不产生激活事件
  */

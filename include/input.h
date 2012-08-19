@@ -37,6 +37,7 @@ GtkShotInput* gtk_shot_input_new(GtkShot *shot);
 void gtk_shot_input_destroy(GtkShotInput *input);
 void gtk_shot_input_show(GtkShotInput *input, gint x, gint y);
 void gtk_shot_input_hide(GtkShotInput *input);
+gboolean gtk_shot_input_visible(GtkShotInput *input);
 void gtk_shot_input_set_font(GtkShotInput *input
                                   , const char *fontname
                                   , gint color);

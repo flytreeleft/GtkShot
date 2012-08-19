@@ -105,16 +105,14 @@ GtkShotPenEditor* gtk_shot_pen_editor_new(GtkShot *shot) {
 }
 
 void gtk_shot_pen_editor_destroy(GtkShotPenEditor *editor) {
-  g_return_if_fail(editor != NULL);
+  g_return_if_fail(editor);
 
   gtk_widget_destroy(GTK_WIDGET(editor->window));
-
   g_free(editor);
 }
 
 void gtk_shot_pen_editor_show(GtkShotPenEditor *editor) {
-  g_return_if_fail(editor != NULL);
-  if (!editor->pen) return;
+  g_return_if_fail(editor && editor->pen);
   
   GList *l =
         gtk_container_get_children(GTK_CONTAINER(editor->left_box));
@@ -142,15 +140,17 @@ void gtk_shot_pen_editor_show(GtkShotPenEditor *editor) {
 }
 
 void gtk_shot_pen_editor_hide(GtkShotPenEditor *editor) {
-  g_return_if_fail(editor != NULL);
+  g_return_if_fail(editor);
 
-  // TODO 取消所有按钮的激活态
+  // 取消所有按钮的激活态
+  GList *l = gtk_container_get_children(GTK_CONTAINER(editor->size_box));
+  set_all_toggle_button_inactive(l);
   gtk_widget_hide_all(GTK_WIDGET(editor->window));
 }
 
 void gtk_shot_pen_editor_set_pen(GtkShotPenEditor *editor
                                           , GtkShotPen *pen) {
-  g_return_if_fail(editor != NULL);
+  g_return_if_fail(editor);
   
   if (pen) {
     pen->color = editor->color;
@@ -248,11 +248,7 @@ GtkBox* create_color_box(GtkShotPenEditor *editor) {
                           , GINT_TO_POINTER(color_maps[i].color));
     gtk_widget_set_size_request(btn, 14, 14);
 
-    if (i < size / 2) {
-      pack_to_box(up_hbox, btn);
-    } else {
-      pack_to_box(down_hbox, btn);
-    }
+    pack_to_box(i < size / 2 ? up_hbox : down_hbox, btn);
   }
   pack_to_box(right, up_hbox);
   pack_to_box(right, down_hbox);
@@ -269,15 +265,9 @@ GtkBox* create_color_box(GtkShotPenEditor *editor) {
 
 void on_set_pen_size(GtkToggleButton *btn, GtkShotPenEditor *editor) {
   // 查找其他已激活按钮(只会有一个)
-  GList *l =
-        gtk_container_get_children(GTK_CONTAINER(editor->size_box));
-  GtkToggleButton *act = NULL;
-  for (l; l; l = l->next) {
-    GtkToggleButton *b = GTK_TOGGLE_BUTTON(l->data);
-    if (b != btn && b->active) {
-      act = b; break;
-    }
-  }
+  GList *l = gtk_container_get_children(GTK_CONTAINER(editor->size_box));
+  GtkToggleButton *act = get_active_toggle_button_except(l, btn);
+
   // 点击的按钮非激活且没有其他激活的按钮,则保持该按钮的激活状态
   if (!btn->active && !act) {
     gtk_toggle_button_mark_active(btn, TRUE);
@@ -327,12 +317,13 @@ void on_set_pen_color(GtkColorButton *btn, GParamSpec *pspec
 
 void on_change_color(GtkButton *btn, GtkColorButton *color_btn) {
   GdkColor c;
-  parse_to_gdk_color(GPOINTER_TO_INT(g_object_get_data(G_OBJECT(btn)
-                                          , "pen-color"))
-                            , &c);
+  gint color = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(btn), "pen-color"));
+
+  parse_to_gdk_color(color, &c);
   gtk_color_button_set_color(color_btn, &c);
 }
 
+/** 在按钮上绘制指定颜色的背景 */
 gboolean on_color_button_expose(GtkWidget *widget
                                         , GdkEventExpose *event
                                         , gpointer *color) {

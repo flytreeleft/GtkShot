@@ -26,6 +26,7 @@
 #include <gtk/gtk.h>
 
 #include "utils.h"
+#include "xpm.h"
 
 #include "shot.h"
 
@@ -60,8 +61,13 @@ int main(int argc, char *argv[]) {
   shot = gtk_shot_new();
   shot->quit = quit;
   shot->dblclick = save_to_clipboard;
-  gtk_shot_show(shot, TRUE);
 
+  gtk_window_set_title(GTK_WINDOW(shot), GTK_SHOT_NAME);
+  GdkPixbuf *icon = gdk_pixbuf_new_from_xpm_data(gtkshot_xpm);
+  gtk_window_set_icon(GTK_WINDOW(shot), icon);
+  g_object_unref(icon);
+
+  gtk_shot_show(shot, TRUE);
   //gtk_shot_destroy(shot);
   gtk_main();
 

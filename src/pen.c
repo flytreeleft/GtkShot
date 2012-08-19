@@ -27,8 +27,7 @@
 
 #define PREPARE_PEN_AND_CAIRO(pen, cr) \
         do { \
-          g_return_if_fail((pen) != NULL); \
-          g_return_if_fail((cr) != NULL); \
+          g_return_if_fail(pen && cr); \
           cairo_set_line_width((cr), (pen)->size); \
           cairo_set_source_rgb((cr), RGB_R((pen)->color) / 255.0 \
                                     , RGB_G((pen)->color) / 255.0 \
@@ -69,7 +68,8 @@ GtkShotPen* gtk_shot_pen_new(GtkShotPenType type) {
 }
 
 void gtk_shot_pen_free(GtkShotPen *pen) {
-  if (!pen) return;
+  g_return_if_fail(pen);
+
   if (pen->type == GTK_SHOT_PEN_LINE) {
     GSList *l = pen->tracks;
     for (l; l; l = l->next) {
@@ -83,23 +83,24 @@ void gtk_shot_pen_free(GtkShotPen *pen) {
   g_free(pen);
 }
 
-/** 画笔复位: 仅将其附属属性(attached)赋值为NULL */
+/** 画笔复位 */
 void gtk_shot_pen_reset(GtkShotPen *pen) {
-  if (pen) {
-    pen->tracks = NULL;
-    pen->text.fontname = pen->text.content = NULL;
-    // 由于窗口绘制有延时,在画笔复位完成时,
-    // 窗口可能还未完成绘制,故将画笔的起始位置进行调整,
-    // 使其不可见 :-(
-    pen->start.x = pen->start.y = -100;
-    gdk_point_assign(pen->start, pen->end);
-  }
+  g_return_if_fail(pen);
+
+  pen->tracks = NULL;
+  pen->text.fontname = pen->text.content = NULL;
+  // 由于窗口绘制有延时,在画笔复位完成时,
+  // 窗口可能还未完成绘制,故将画笔的起始位置进行调整,
+  // 使其不可见 :-(
+  pen->start.x = pen->start.y = -pen->size;
+  gdk_point_assign(pen->end, pen->start);
 }
 
 void gtk_shot_pen_save_general_track(GtkShotPen *pen
                                       , gint x, gint y) {
-  g_return_if_fail(pen != NULL);
-  pen->end.x = x; pen->end.y = y;
+  g_return_if_fail(pen);
+  pen->end.x = x;
+  pen->end.y = y;
 }
 
 /**
@@ -107,19 +108,18 @@ void gtk_shot_pen_save_general_track(GtkShotPen *pen
  */
 void gtk_shot_pen_save_line_track(GtkShotPen *pen
                                       , gint x, gint y) {
-  g_return_if_fail(pen != NULL);
-  pen->end.x = x; pen->end.y = y;
+  g_return_if_fail(pen);
+  pen->end.x = x;
+  pen->end.y = y;
 
-  GdkPoint *last = NULL;
   // 倒序排列
-  last = pen->tracks != NULL
-                  ? (GdkPoint*) pen->tracks->data
-                    : NULL;
-  if (last && gdk_point_is_equal(*last, pen->end)) {
-    return;
-  }
+  GdkPoint *last = pen->tracks
+                      ? (GdkPoint*) pen->tracks->data
+                        : NULL;
+  g_return_if_fail(!last || !gdk_point_is_equal(*last, pen->end));
+
   last = g_new(GdkPoint, 1);
-  last->x = x; last->y = y;
+  gdk_point_assign(*last, pen->end);
   pen->tracks = g_slist_prepend(pen->tracks, last);
 }
 
@@ -141,13 +141,10 @@ void gtk_shot_pen_draw_ellipse(GtkShotPen *pen, cairo_t *cr) {
   cairo_save(cr);
   cairo_translate(cr, (pen->start.x + pen->end.x) / 2.0
                     , (pen->start.y + pen->end.y) / 2.0);
-  if (dx > 0 && dy > 0) {
-    cairo_scale(cr, 1.0, ((gfloat) dy) / dx);
-    cairo_arc(cr, 0, 0, dx / 2.0, 0, 2 * M_PI);
-  } else {
-    // 高或宽为0时,则画矩形
-    cairo_rectangle(cr, -dx / 2.0, -dy / 2.0, dx, dy);
-  }
+  dx = MAX(dx, 1);
+  dy = MAX(dy, 1);
+  cairo_scale(cr, 1.0, ((gfloat) dy) / dx);
+  cairo_arc(cr, 0, 0, dx / 2.0, 0, 2 * M_PI);
   cairo_restore(cr);
 
   cairo_stroke(cr);
@@ -229,21 +226,9 @@ void gtk_shot_pen_draw_line(GtkShotPen *pen, cairo_t *cr) {
 
 void gtk_shot_pen_draw_text(GtkShotPen *pen, cairo_t *cr) {
   PREPARE_PEN_AND_CAIRO(pen, cr);
-  if (!pen->text.content) {
-    return;
-  }
 
-  // Thanks deepin-screenshot START
+  g_return_if_fail(pen->text.content);
+
   cairo_move_to(cr, pen->start.x, pen->start.y - SYSTEM_CURSOR_SIZE / 2);
-
-  PangoLayout *layout = pango_cairo_create_layout(cr);
-  PangoFontDescription *desc
-        = pango_font_description_from_string(pen->text.fontname);
-  pango_layout_set_text(layout, pen->text.content, -1);
-  pango_layout_set_font_description(layout, desc);
-  pango_font_description_free(desc);
-
-  pango_cairo_update_layout(cr, layout);
-  pango_cairo_show_layout(cr, layout);
-  // Thanks deepin-screenshot END
+  cairo_draw_text(cr, pen->text.content, pen->text.fontname);
 }

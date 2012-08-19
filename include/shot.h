@@ -39,8 +39,6 @@ typedef struct _GtkShot GtkShot;
 #define GTK_SHOT_ANCHOR_BORDER 6
 /* The color of mask */
 #define GTK_SHOT_COLOR 0x000000
-/* Whether using anchor around area of caputure */
-#define GTK_SHOT_NO_ANCHOR 0
 /* The opacity of mask */
 #define GTK_SHOT_OPACITY 0.8
 /* The border of selection of capture */
@@ -70,7 +68,6 @@ enum _GtkShotMode {
   MOVE_MODE, /* 移动模式 */
   ZOOM_MODE, /* 缩放模式 */
   EDIT_MODE,  /* 编辑模式 */
-  EDIT_TEXT_MODE, /* 编辑模式中的文字模式 */
   /**
    * 保存模式:
    * 该模式为冻结窗口模式,
@@ -116,7 +113,6 @@ struct _GtkShot {
   gdouble opacity;  // 窗口透明度
   gint color; // 16进制背景色
   gint anchor_border; // 缩放锚点的宽度
-  gboolean has_anchor; // 是否绘制缩放锚点
 
   GtkShotSection section; // 选择区域
   GtkShotCursorPos cursor_pos; // 鼠标位置
@@ -156,6 +152,7 @@ void gtk_shot_set_pen(GtkShot *shot, GtkShotPen *pen);
 void gtk_shot_save_pen(GtkShot *shot, gboolean reset);
 void gtk_shot_remove_pen(GtkShot *shot);
 void gtk_shot_undo_pen(GtkShot *shot);
+gboolean gtk_shot_has_empty_historic_pen(GtkShot *shot);
 
 GType gtk_shot_get_type();
 

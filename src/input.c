@@ -24,12 +24,6 @@
 #include "shot.h"
 #include "input.h"
 
-// Events
-static gboolean on_input_window_expose(GtkWidget *widget
-                                        , gpointer data);
-static void on_input_window_show(GtkWidget *widget
-                                      , gpointer data);
-
 GtkShotInput* gtk_shot_input_new(GtkShot *shot) {
   gint width = 300, height = 80;
   GtkShotInput *input = g_new(GtkShotInput, 1);
@@ -61,33 +55,37 @@ GtkShotInput* gtk_shot_input_new(GtkShot *shot) {
 }
 
 void gtk_shot_input_destroy(GtkShotInput *input) {
-  g_return_if_fail(input != NULL);
+  g_return_if_fail(input);
 
   gtk_widget_destroy(GTK_WIDGET(input->window));
-
   g_free(input);
 }
 
 void gtk_shot_input_show(GtkShotInput *input, gint x, gint y) {
-  g_return_if_fail(input != NULL);
+  g_return_if_fail(input);
 
-  GtkTextBuffer *buffer;
-  buffer = gtk_text_view_get_buffer(input->view);
+  GtkTextBuffer *buffer = gtk_text_view_get_buffer(input->view);
   gtk_text_buffer_set_text(buffer, "", -1);
 
   gtk_widget_show_all(GTK_WIDGET(input->window));
   gtk_window_move(input->window, x, y - SYSTEM_CURSOR_SIZE / 2);
+  gdk_keyboard_grab(GTK_WIDGET(input->window)->window
+                        , FALSE, GDK_CURRENT_TIME);
 }
 
 void gtk_shot_input_hide(GtkShotInput *input) {
-  g_return_if_fail(input != NULL);
+  g_return_if_fail(input);
   gtk_widget_hide_all(GTK_WIDGET(input->window));
+}
+
+gboolean gtk_shot_input_visible(GtkShotInput *input) {
+  return input && gtk_widget_get_visible(GTK_WIDGET(input->window));
 }
 
 void gtk_shot_input_set_font(GtkShotInput *input
                                   , const char *fontname
                                   , gint color) {
-  g_return_if_fail(input != NULL);
+  g_return_if_fail(input);
 #ifdef GTK_SHOT_DEBUG
   debug("font(%s), color(%x)\n", fontname, color);
 #endif
@@ -104,7 +102,7 @@ void gtk_shot_input_set_font(GtkShotInput *input
 }
 
 gchar* gtk_shot_input_get_text(GtkShotInput *input) {
-  g_return_if_fail(input != NULL);
+  g_return_val_if_fail(gtk_shot_input_visible(input), NULL);
 
   GtkTextBuffer *buffer;
   GtkTextIter start, end;
@@ -116,22 +114,4 @@ gchar* gtk_shot_input_get_text(GtkShotInput *input) {
   return g_strstrip(gtk_text_buffer_get_text(buffer
                                                 , &start, &end
                                                 , FALSE));
-}
-
-gboolean on_input_window_expose(GtkWidget *widget, gpointer data) {
-  cairo_t *cr;
-  gint width, height;
-
-  gtk_widget_get_size_request(widget, &width, &height);
-
-  cr = gdk_cairo_create(gtk_widget_get_window(widget));
-  cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
-
-  cairo_set_source_rgba(cr, 0, 0, 0, 0);
-  cairo_rectangle(cr, 0, 0, width, height);
-  cairo_fill(cr);
-
-  cairo_destroy(cr);
-
-  return TRUE;
 }
