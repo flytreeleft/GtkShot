@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include <gtk/gtk.h>
+#include <glib/gi18n.h>
 
 #include "utils.h"
 #include "xpm.h"
@@ -43,6 +44,12 @@ static void remove_lock_file();
 static gint new_lock_file();
 
 int main(int argc, char *argv[]) {
+#ifdef ENABLE_NLS
+  bindtextdomain(GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR);
+  bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+  textdomain(GETTEXT_PACKAGE);
+#endif
+
   gint pid = new_lock_file();
 
   if (pid > 0) {
@@ -68,7 +75,6 @@ int main(int argc, char *argv[]) {
   g_object_unref(icon);
 
   gtk_shot_show(shot, TRUE);
-  //gtk_shot_destroy(shot);
   gtk_main();
 
   return 0;

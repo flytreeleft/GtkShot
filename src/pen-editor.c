@@ -32,21 +32,21 @@ typedef struct _ColorMap {
 } ColorMap;
 static ColorMap color_maps[] = {
   {.name = N_("white"), .color = 0xffffff},
-  {.name = N_("gray"), .color = 0xc0c0c0},
+  {.name = N_("silver"), .color = 0xc0c0c0},
   {.name = N_("red"), .color = 0xff0000},
   {.name = N_("yellow"), .color = 0xffff00},
-  {.name = N_("green"), .color = 0x00ff00},
+  {.name = N_("lime"), .color = 0x00ff00},
   {.name = N_("blue"), .color = 0x0000ff},
-  {.name = N_("pink"), .color = 0xff00ff},
-  {.name = N_("wathet"), .color = 0x00ffff},
+  {.name = N_("fuchsia"), .color = 0xff00ff},
+  {.name = N_("cyan"), .color = 0x00ffff},
   {.name = N_("black"), .color = 0x000000},
-  {.name = N_("dark gray"), .color = 0x808080},
-  {.name = N_("dark red"), .color = 0x800000},
-  {.name = N_("dark yellow"), .color = 0x808000},
-  {.name = N_("dark green"), .color = 0x008000},
-  {.name = N_("dark blue"), .color = 0x000080},
-  {.name = N_("dark pink"), .color = 0x800080},
-  {.name = N_("dark wathet"), .color = 0x008080}
+  {.name = N_("gray"), .color = 0x808080},
+  {.name = N_("maroon"), .color = 0x800000},
+  {.name = N_("olive"), .color = 0x808000},
+  {.name = N_("green"), .color = 0x008000},
+  {.name = N_("navy"), .color = 0x000080},
+  {.name = N_("purple"), .color = 0x800080},
+  {.name = N_("teal"), .color = 0x008080}
 };
 
 // Button Events
@@ -242,7 +242,7 @@ GtkBox* create_color_box(GtkShotPenEditor *editor) {
     g_signal_connect(btn, "clicked"
                         , G_CALLBACK(on_change_color)
                         , color_btn);
-    gtk_widget_set_tooltip_text(btn, color_maps[i].name);
+    gtk_widget_set_tooltip_text(btn, _(color_maps[i].name));
     g_object_set_data(G_OBJECT(btn)
                           , "pen-color"
                           , GINT_TO_POINTER(color_maps[i].color));
@@ -333,9 +333,7 @@ gboolean on_color_button_expose(GtkWidget *widget
   cr = gdk_cairo_create(widget->window);
   cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
 
-  cairo_set_source_rgb(cr, RGB_R(c) / 255.0
-                          , RGB_G(c) / 255.0
-                          , RGB_B(c) / 255.0);
+  SET_CAIRO_RGB(cr, c);
   cairo_rectangle(cr, widget->allocation.x
                     , widget->allocation.y
                     , widget->allocation.width

@@ -136,28 +136,7 @@ gboolean on_undo(GtkButton *btn, GtkShotToolbar *toolbar) {
 }
 
 gboolean on_save_to_file(GtkButton *btn, GtkShotToolbar *toolbar) {
-  char *type = NULL;
-  gboolean succ = FALSE;
-  GdkPixbuf *pixbuf = gtk_shot_get_section_pixbuf(toolbar->shot);
-  gchar *filename =
-        choose_and_get_filename(GTK_WINDOW(toolbar->shot)
-                                    , &type, NULL);
-  if (filename) {
-    GError *error = NULL;
-    succ = gdk_pixbuf_save(pixbuf, filename, type
-                                  , &error, NULL);
-    if (!succ) {
-      popup_message_dialog(GTK_WINDOW(toolbar->shot)
-                                , error->message);
-    }
-  }
-  g_free(filename);
-  g_free(type);
-  
-  if (succ) {
-    gtk_shot_quit(toolbar->shot);
-  }
-
+  gtk_shot_save_section_to_file(toolbar->shot);
   return TRUE;
 }
 
@@ -180,7 +159,7 @@ GtkBox* create_pen_box(GtkShotToolbar *toolbar) {
 
   for (i = 0; i < size; i++) {
     btn = create_xpm_button(pen_btns[i].xpm
-                                , pen_btns[i].tips
+                                , _(pen_btns[i].tips)
                                 , G_CALLBACK(on_change_pen)
                                 , TRUE, toolbar);
     g_object_set_data(G_OBJECT(btn)

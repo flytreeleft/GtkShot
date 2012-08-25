@@ -63,6 +63,8 @@ static gboolean on_shot_motion_notify(GtkWidget *widget
                                           , GdkEventMotion *event);
 static gboolean on_shot_key_press(GtkWidget *widget
                                           , GdkEventKey *event);
+static gboolean on_shot_key_release(GtkWidget *widget
+                                          , GdkEventKey *event);
 
 // private(第一个参数为GtkShot时,函数名称以gtk_shot_开头)
 static void gtk_shot_process_edit_mode(GtkShot *shot
@@ -75,13 +77,10 @@ static void gtk_shot_draw_anchor(GtkShot *shot, cairo_t *cr);
 static void gtk_shot_draw_message(GtkShot *shot, cairo_t *cr);
 static void gtk_shot_clean_section(GtkShot *shot);
 static void gtk_shot_clean_historic_pen(GtkShot *shot);
-static void gtk_shot_move_section(GtkShot *shot, gint x, gint y);
+static void gtk_shot_move_section(GtkShot *shot, gint dx, gint dy);
 static void gtk_shot_resize_section(GtkShot *shot, gint x, gint y);
 static void gtk_shot_adjust_section(GtkShot *shot, gint x0, gint y0
                                                 , gint x1, gint y1);
-static void gtk_shot_get_section_coordinate(GtkShot *shot
-                                              , gint *x0, gint *y0
-                                              , gint *x1, gint *y1);
 static void gtk_shot_get_zoom_anchor(GtkShot *shot, GdkPoint anchor[8]);
 static GtkShotCursorPos gtk_shot_get_cursor_pos(GtkShot *shot
                                                     , gint x, gint y);
@@ -105,6 +104,7 @@ void gtk_shot_class_init(GtkShotClass *klass) {
   widget_class->button_release_event = on_shot_button_release;
   widget_class->motion_notify_event = on_shot_motion_notify;
   widget_class->key_press_event = on_shot_key_press;
+  widget_class->key_release_event = on_shot_key_release;
 }
 
 void gtk_shot_init(GtkShot *shot) {
@@ -146,14 +146,6 @@ void gtk_shot_init(GtkShot *shot) {
                 cairo_image_surface_create(CAIRO_FORMAT_ARGB32
                                                 , shot->width
                                                 , shot->height);
-#ifdef GTK_SHOT_DEBUG
-  debug("window size(%d, %d), section color(%x: %x, %x, %x)\n"
-                    , shot->width, shot->height
-                    , shot->section.color
-                    , RGB_R(shot->section.color)
-                    , RGB_G(shot->section.color)
-                    , RGB_B(shot->section.color));
-#endif
   // 全屏窗口
   gtk_window_set_default_size(GTK_WINDOW(shot)
                                 , shot->width, shot->height);
@@ -210,6 +202,44 @@ void gtk_shot_destroy(GtkShot *shot) {
   gtk_widget_destroy(GTK_WIDGET(shot));
 }
 
+void gtk_shot_hide(GtkShot *shot) {
+  g_return_if_fail(IS_GTK_SHOT(shot)
+                      && gtk_widget_get_visible(GTK_WIDGET(shot)));
+
+  gtk_widget_hide_all(GTK_WIDGET(shot));
+  gtk_shot_hide_toolbar(shot);
+  gtk_shot_input_hide(shot->input);
+  gdk_keyboard_ungrab(GDK_CURRENT_TIME);
+}
+
+void gtk_shot_show(GtkShot *shot, gboolean clean) {
+  g_return_if_fail(IS_GTK_SHOT(shot)
+                      && !gtk_widget_get_visible(GTK_WIDGET(shot)));
+
+  if (clean) {
+    shot->screen_pixbuf =
+      gdk_pixbuf_get_from_drawable(shot->screen_pixbuf
+                                    , gdk_get_default_root_window()
+                                    , NULL
+                                    , shot->x, shot->y
+                                    , 0, 0
+                                    , shot->width, shot->height);
+    gtk_shot_clean_section(shot);
+    shot->mode = NORMAL_MODE;
+  }
+  gtk_widget_show(GTK_WIDGET(shot));
+}
+
+void gtk_shot_quit(GtkShot *shot) {
+  g_return_if_fail(IS_GTK_SHOT(shot));
+
+  if (shot->quit) {
+    shot->quit();
+  } else {
+    gtk_shot_hide(shot);
+  }
+}
+
 gboolean gtk_shot_has_visible_section(GtkShot *shot) {
   gint x0, y0, x1, y1;
   gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
@@ -217,22 +247,22 @@ gboolean gtk_shot_has_visible_section(GtkShot *shot) {
   return (x1 - x0) > 0 && (y1 - y0) > 0;
 }
 
+/** 获取选区的实际边界(起点和终点坐标) */
 void gtk_shot_get_section(GtkShot *shot, gint *x0, gint *y0
                                           , gint *x1, gint *y1) {
   *x0 = 0; *y0 = 0; *x1 = 0; *y1 = 0;
   g_return_if_fail(IS_GTK_SHOT(shot));
 
-  // border为线宽,所绘矩形的起始点在线宽的中心线上
-  gint border = shot->section.border / 2 + shot->section.border % 2;
+  // 所绘矩形的起始点在线宽的中心线上,其宽度和高度包含了一个线宽
+  gint b = shot->section.border / 2 + shot->section.border % 2;
+  gint w = MAX(shot->section.width - shot->section.border, 0);
+  gint h = MAX(shot->section.height - shot->section.border, 0);
 
-  gtk_shot_get_section_coordinate(shot, x0, y0, x1, y1);
-  if (*x0 != *x1 && *y0 != *y1) {
-    // 修正坐标(去除边框和屏幕外的部分)
-    *x0 = MAX(*x0 + border, shot->x);
-    *y0 = MAX(*y0 + border, shot->y);
-    *x1 = MIN(*x1 - border, shot->width);
-    *y1 = MIN(*y1 - border, shot->height);
-  }
+   // 修正坐标(去除边框和屏幕外的部分)
+  *x0 = MAX(shot->section.x + b, shot->x);
+  *y0 = MAX(shot->section.y + b, shot->y);
+  *x1 = MIN(shot->section.x + w, shot->x + shot->width);
+  *y1 = MIN(shot->section.y + h, shot->y + shot->height);
 }
 
 GdkPixbuf* gtk_shot_get_section_pixbuf(GtkShot *shot) {
@@ -273,49 +303,39 @@ GdkPixbuf* gtk_shot_get_section_pixbuf(GtkShot *shot) {
 
 void gtk_shot_save_section_to_clipboard(GtkShot *shot) {
   GdkPixbuf *pixbuf = gtk_shot_get_section_pixbuf(shot);
-
-  g_return_if_fail(pixbuf != NULL);
-
-  save_pixbuf_to_clipboard(pixbuf);
-  g_object_unref(pixbuf);
-}
-
-void gtk_shot_hide(GtkShot *shot) {
-  g_return_if_fail(IS_GTK_SHOT(shot)
-                      && gtk_widget_get_visible(GTK_WIDGET(shot)));
-
-  gtk_widget_hide_all(GTK_WIDGET(shot));
-  gtk_shot_hide_toolbar(shot);
-  gtk_shot_input_hide(shot->input);
-  gdk_keyboard_ungrab(GDK_CURRENT_TIME);
-}
-
-void gtk_shot_show(GtkShot *shot, gboolean clean) {
-  g_return_if_fail(IS_GTK_SHOT(shot)
-                      && !gtk_widget_get_visible(GTK_WIDGET(shot)));
-
-  if (clean) {
-    shot->screen_pixbuf =
-      gdk_pixbuf_get_from_drawable(shot->screen_pixbuf
-                                    , gdk_get_default_root_window()
-                                    , NULL
-                                    , shot->x, shot->y
-                                    , 0, 0
-                                    , shot->width, shot->height);
-    gtk_shot_clean_section(shot);
-    shot->mode = NORMAL_MODE;
+  if (pixbuf) {
+    save_pixbuf_to_clipboard(pixbuf);
+    g_object_unref(pixbuf);
   }
-  gtk_widget_show(GTK_WIDGET(shot));
 }
 
-void gtk_shot_quit(GtkShot *shot) {
+void gtk_shot_save_section_to_file(GtkShot *shot) {
   g_return_if_fail(IS_GTK_SHOT(shot));
 
-  if (shot->quit) {
-    shot->quit();
-  } else {
-    gtk_shot_hide(shot);
+  gchar *type = NULL;
+  gboolean succ = FALSE;
+  GdkPixbuf *pixbuf = gtk_shot_get_section_pixbuf(shot);
+  gchar *filename =
+        choose_and_get_filename(GTK_WINDOW(shot)
+                                    , &type, NULL);
+  if (filename) {
+    GError *error = NULL;
+    succ = gdk_pixbuf_save(pixbuf, filename, type
+                                  , &error, NULL);
+    if (!succ) {
+      popup_message_dialog(GTK_WINDOW(shot), error->message);
+    }
   }
+  g_free(filename);
+  g_free(type);
+  
+  if (succ) {
+    gtk_shot_quit(shot);
+  }
+}
+
+void gtk_shot_record(GtkShot *shot) {
+  g_return_if_fail(IS_GTK_SHOT(shot));
 }
 
 void gtk_shot_hide_toolbar(GtkShot *shot) {
@@ -452,10 +472,7 @@ gboolean on_shot_button_press(GtkWidget *widget
   GtkShot *shot = GTK_SHOT(widget);
 
   if (event->button != 1) return FALSE;
-#ifdef GTK_SHOT_DEBUG
-  debug("event(%f, %f)\n"
-              , event->x, event->y);
-#endif
+
   if (event->type == GDK_2BUTTON_PRESS) {
     if (shot->dblclick) {
       shot->dblclick();
@@ -467,8 +484,7 @@ gboolean on_shot_button_press(GtkWidget *widget
     if (shot->mode == NORMAL_MODE) {
       if (shot->cursor_pos == OUTER_OF_SECTION) {
         shot->mode = DRAW_MODE;
-        shot->section.x = event->x;
-        shot->section.y = event->y;
+        gdk_point_assign(shot->section, *event);
         shot->section.width = shot->section.height = 0;
         gtk_shot_refresh(shot);
       } else if (shot->cursor_pos == INNER_OF_SECTION) {
@@ -491,10 +507,6 @@ gboolean on_shot_button_release(GtkWidget *widget
   if (event->button != 1 || event->type != GDK_BUTTON_RELEASE) {
     return FALSE;
   }
-#ifdef GTK_SHOT_DEBUG
-  debug("event(%f, %f)\n"
-                , event->x, event->y);
-#endif
   switch(shot->mode) {
     case DRAW_MODE:
     case MOVE_MODE:
@@ -521,12 +533,6 @@ gboolean on_shot_motion_notify(GtkWidget *widget
   GdkPoint cursor;
 
   gtk_widget_get_pointer(widget, &cursor.x, &cursor.y);
-#ifdef GTK_SHOT_DEBUG
-  debug("event(%f, %f), cursor(%d, %d), mouse press(%d)\n"
-                , event->x, event->y
-                , cursor.x, cursor.y
-                , event->state & GDK_BUTTON1_MASK);
-#endif
   if (event->state & GDK_BUTTON1_MASK) { // 鼠标被按下
     switch(shot->mode) {
       case DRAW_MODE:
@@ -539,7 +545,8 @@ gboolean on_shot_motion_notify(GtkWidget *widget
         }
         break;
       case MOVE_MODE:
-        gtk_shot_move_section(shot, cursor.x, cursor.y);
+        gtk_shot_move_section(shot, cursor.x - shot->move_start.x
+                                  , cursor.y - shot->move_start.y);
         break;
       case ZOOM_MODE:
         gtk_shot_resize_section(shot, cursor.x, cursor.y);
@@ -564,16 +571,22 @@ gboolean on_shot_motion_notify(GtkWidget *widget
 
 gboolean on_shot_key_press(GtkWidget *widget
                                 , GdkEventKey *event) {
-  debug("key press: %s\n", gdk_keyval_name(event->keyval));
-  if (event->type == GDK_KEY_PRESS) {
-    // 标记绘制正圆 
-  } else if (event->type == GDK_KEY_RELEASE) {
-    // 标记取消绘制正圆
-    return FALSE;
-  }
   GtkShot *shot = GTK_SHOT(widget);
   gboolean is_ctrl = event->state && GDK_CONTROL_MASK;
-  gint dx = 0, dy = 0, w = 0, h = 0;
+#ifdef GTK_SHOT_DEBUG
+  debug("key press: %s, ctrl mask: %d\n"
+                , gdk_keyval_name(event->keyval)
+                , is_ctrl);
+#endif
+  if (shot->pen
+        && (event->keyval == GDK_Control_L
+              || event->keyval == GDK_Control_R)) {
+    shot->pen->square = !shot->pen->square;
+    gtk_shot_refresh(shot);
+    return TRUE;
+  }
+
+  gint dx = 0, dy = 0;
   switch (event->keyval) {
     case GDK_KP_Up:
     case GDK_Up: dy -= 2;
@@ -584,22 +597,57 @@ gboolean on_shot_key_press(GtkWidget *widget
     case GDK_KP_Right:
     case GDK_Right: dx += 1;
       if (!is_ctrl) { // move
-        shot->section.x += dx;
-        shot->section.y += dy;
+        gtk_shot_move_section(shot, dx, dy);
       } else { // resize
-        w = ABS(shot->section.width + dx);
-        h = ABS(shot->section.height + dy);
+        gint w = ABS(shot->section.width + dx);
+        gint h = ABS(shot->section.height + dy);
         if (w == 0 || h == 0) break;
         shot->section.width = w;
         shot->section.height = h;
-        debug("resize: %d, %d\n", w, h);
       }
       gtk_shot_refresh(shot);
       gtk_shot_show_toolbar(shot);
       break;
   }
-
+  if (is_ctrl) {
+    switch (event->keyval) {
+      case GDK_s: // save
+        gtk_shot_save_section_to_file(shot);
+        break;
+      case GDK_o: // ok
+        gtk_shot_save_section_to_clipboard(shot);
+        gtk_shot_hide(shot);
+        break;
+      case GDK_a: // select whole
+        shot->section.x = shot->x - shot->section.border;
+        shot->section.y = shot->y - shot->section.border;
+        shot->section.width = shot->width + 2 * shot->section.border;
+        shot->section.height = shot->height + 2 * shot->section.border;
+        gtk_shot_refresh(shot);
+        gtk_shot_show_toolbar(shot);
+        break;
+      case GDK_d: // dynamic
+        break;
+      case GDK_r: // record
+        gtk_shot_record(shot);
+        break;
+      case GDK_z: // undo
+        gtk_shot_undo_pen(shot);
+        gtk_shot_refresh(shot);
+        break;
+      case GDK_y: // redo
+        break;
+      case GDK_q: // quit
+        gtk_shot_quit(shot);
+        break;
+    }
+  }
   return TRUE;
+}
+
+gboolean on_shot_key_release(GtkWidget *widget
+                                      , GdkEventKey *event) {
+  return FALSE;
 }
 
 void gtk_shot_process_edit_mode(GtkShot *shot
@@ -637,18 +685,18 @@ void gtk_shot_process_edit_mode(GtkShot *shot
 }
 
 void gtk_shot_draw_screen(GtkShot *shot, cairo_t *cr) {
-  g_return_if_fail(shot->screen_pixbuf);
-
-  gdk_cairo_set_source_pixbuf(cr, shot->screen_pixbuf
-                                , 0, 0);
-  cairo_paint(cr);
+  if (shot->screen_pixbuf) {
+    gdk_cairo_set_source_pixbuf(cr, shot->screen_pixbuf
+                                  , 0, 0);
+    cairo_paint(cr);
+  }
 }
 
 void gtk_shot_draw_section(GtkShot *shot, cairo_t *cr) {
   if (shot->section.width > 0
           || shot->section.height > 0) {
     // transparent section
-    cairo_set_source_rgba(cr, 0.0, 0.0, 0.0, 0);
+    SET_CAIRO_RGBA(cr, 0, 0);
     cairo_rectangle(cr, shot->section.x
                       , shot->section.y
                       , shot->section.width
@@ -660,16 +708,11 @@ void gtk_shot_draw_section(GtkShot *shot, cairo_t *cr) {
     gtk_shot_draw_mask(shot, cr);
     // draw section border
     cairo_set_line_width(cr, shot->section.border);
-    cairo_set_source_rgb(cr, RGB_R(shot->section.color) / 255.0
-                            , RGB_G(shot->section.color) / 255.0
-                            , RGB_B(shot->section.color) / 255.0);
-    cairo_rectangle(cr, shot->section.x, shot->section.y
-                      , shot->section.width > 0
-                          ? shot->section.width
-                            : shot->section.border
-                      , shot->section.height > 0
-                          ? shot->section.height
-                            : shot->section.border);
+    SET_CAIRO_RGB(cr, shot->section.color);
+    cairo_rectangle(cr, shot->section.x
+                      , shot->section.y
+                      , shot->section.width
+                      , shot->section.height);
     cairo_stroke(cr);
     // draw zoom anchor
     gtk_shot_draw_anchor(shot, cr);
@@ -696,10 +739,7 @@ void gtk_shot_draw_mask(GtkShot *shot, cairo_t *cr) {
   gint x0, y0, x1, y1;
   gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
 
-  cairo_set_source_rgba(cr, RGB_R(shot->color) / 255.0
-                          , RGB_G(shot->color) / 255.0
-                          , RGB_B(shot->color) / 255.0
-                          , 1 - shot->opacity);
+  SET_CAIRO_RGBA(cr, shot->color, 1 - shot->opacity);
   cairo_rectangle(cr, shot->x, shot->y
                     , shot->width, y0 - shot->y);
   cairo_rectangle(cr, shot->x, y1
@@ -713,54 +753,50 @@ void gtk_shot_draw_mask(GtkShot *shot, cairo_t *cr) {
 
 void gtk_shot_draw_anchor(GtkShot *shot, cairo_t *cr) {
   GdkPoint anchor[8] = {{.x = 0, .y = 0}};
-  gint i = 0;
 
   gtk_shot_get_zoom_anchor(shot, anchor);
-  cairo_set_source_rgb(cr, RGB_R(shot->section.color) / 255.0
-                          , RGB_G(shot->section.color) / 255.0
-                          , RGB_B(shot->section.color) / 255.0);
+  SET_CAIRO_RGB(cr, shot->section.color);
+
+  gint i = 0;
+  gfloat b = shot->anchor_border / 2.0;
   for (i = 0; i < 8; i++) {
-    cairo_arc(cr, anchor[i].x + shot->anchor_border / 2.0
-                , anchor[i].y + shot->anchor_border / 2.0
-                , shot->anchor_border / 2.0, 0, 2 * M_PI);
+    cairo_arc(cr, anchor[i].x + b
+                , anchor[i].y + b
+                , b, 0, 2 * M_PI);
     cairo_fill(cr);
   }
 }
 
 void gtk_shot_draw_message(GtkShot *shot, cairo_t *cr) {
-  gint x0, y0, x1, y1;
-  gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
-  if (shot->section.width == 0 && shot->section.height == 0) {
+  // 选区不存在,或在保存和编辑模式时,不显示信息窗口
+  if ((shot->section.width == 0 && shot->section.height == 0)
+        || shot->mode == EDIT_MODE
+        || shot->mode == SAVE_MODE) {
     return;
   }
+  gint x0, y0, x1, y1;
+  gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
+
   gint radius = 8, width = 145, height = 50;
+  gint b = MAX(shot->section.border, shot->anchor_border);
   gint x = x0 + shot->section.border;
-  gint y = y0 - shot->anchor_border - height;
+  gint y = y0 - b - height;
 
   if (x1 >= shot->x + shot->width && x + width > x1) {
-    x = x1 - width - shot->anchor_border;
+    x = x1 - width - b; // 保持在屏幕内
   }
   if (y < shot->y) {
-    // 非编辑和保存模式时,将信息显示到选区内部,
-    // 否则,不显示信息
-    if (shot->mode != EDIT_MODE
-          && shot->mode != SAVE_MODE) {
-      y = y0 + shot->anchor_border;
-    } else {
-      return;
-    }
+    y = y0 + shot->section.border;
   }
-
   gchar *msg = g_strdup_printf("x:%4d, y:%4d\nw:%4d, h:%4d\n"
                                     , x0, y0
                                     , MAX(x1 - x0, 0)
                                     , MAX(y1 - y0, 0));
-  cairo_set_source_rgba(cr, 0.14, 0.13, 0.15
-                          , shot->opacity / 2.0);
+  SET_CAIRO_RGBA(cr, 0x232126, shot->opacity / 2.0);
   cairo_round_rect(cr, x, y, width, height, radius);
   cairo_fill(cr);
 
-  cairo_set_source_rgb(cr, 1.0, 1.0, 1.0);
+  SET_CAIRO_RGB(cr, 0xFFFFFF);
   cairo_move_to(cr, x + radius, y + radius / 3.0);
   cairo_draw_text(cr, msg, "");
 
@@ -784,10 +820,7 @@ void gtk_shot_clean_historic_pen(GtkShot *shot) {
   shot->historic_pen = NULL;
 }
 
-void gtk_shot_move_section(GtkShot *shot, gint x, gint y) {
-  gint dx = x - shot->move_start.x;
-  gint dy = y - shot->move_start.y;
-
+void gtk_shot_move_section(GtkShot *shot, gint dx, gint dy) {
   shot->section.x += dx;
   shot->section.y += dy;
 
@@ -799,8 +832,10 @@ void gtk_shot_move_section(GtkShot *shot, gint x, gint y) {
 
 void gtk_shot_resize_section(GtkShot *shot, gint x, gint y) {
   gint x0, y0, x1, y1;
-
-  gtk_shot_get_section_coordinate(shot, &x0, &y0, &x1, &y1);
+  x0 = shot->section.x;
+  y0 = shot->section.y;
+  x1 = x0 + shot->section.width;
+  y1 = y0 + shot->section.height;
 
   switch(shot->cursor_pos) {
     case LEFT_TOP_OF_SECTION: x0 = x;
@@ -843,24 +878,16 @@ void gtk_shot_adjust_section(GtkShot *shot, gint x0, gint y0
   shot->section.height = ABS(y0 -y1);
 }
 
-void gtk_shot_get_section_coordinate(GtkShot *shot
-                                            , gint *x0, gint *y0
-                                            , gint *x1, gint *y1) {
-  *x0 = shot->section.x;
-  *y0 = shot->section.y;
-  *x1 = shot->section.x + shot->section.width;
-  *y1 = shot->section.y + shot->section.height;
-}
-
 void gtk_shot_adjust_toolbar(GtkShot *shot) {
   gint x = 0, y = 0, x0, y0, x1, y1;
+  gint b = MAX(shot->section.border, shot->anchor_border);
   gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
 
   // 扩展到锚点外部矩形范围
-  x0 -= shot->anchor_border;
-  y0 -= shot->anchor_border;
-  x1 += shot->anchor_border;
-  y1 += shot->anchor_border;
+  x0 -= b;
+  y0 -= b;
+  x1 += b;
+  y1 += b;
   // 限定在MASK区域,并转换坐标系为相对于MASK的坐标系
   x0 = MAX(x0, shot->x) - shot->x;
   y0 = MAX(y0, shot->y) - shot->y;

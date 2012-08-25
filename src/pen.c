@@ -27,11 +27,9 @@
 
 #define PREPARE_PEN_AND_CAIRO(pen, cr) \
         do { \
-          g_return_if_fail(pen && cr); \
+          g_return_if_fail((pen) && (cr)); \
           cairo_set_line_width((cr), (pen)->size); \
-          cairo_set_source_rgb((cr), RGB_R((pen)->color) / 255.0 \
-                                    , RGB_G((pen)->color) / 255.0 \
-                                    , RGB_B((pen)->color) / 255.0); \
+          SET_CAIRO_RGB((cr), (pen)->color); \
         } while(0)
 
 GtkShotPen* gtk_shot_pen_new(GtkShotPenType type) {
@@ -39,6 +37,9 @@ GtkShotPen* gtk_shot_pen_new(GtkShotPenType type) {
 
   pen->size = GTK_SHOT_DEFAULT_PEN_SIZE;
   pen->color = GTK_SHOT_DEFAULT_PEN_COLOR;
+  pen->start.x = pen->start.y = -pen->size;
+  gdk_point_assign(pen->end, pen->start);
+  pen->square = FALSE;
   pen->tracks = NULL;
   pen->text.fontname = pen->text.content = NULL;
   pen->type = type;
@@ -87,6 +88,7 @@ void gtk_shot_pen_free(GtkShotPen *pen) {
 void gtk_shot_pen_reset(GtkShotPen *pen) {
   g_return_if_fail(pen);
 
+  pen->square = FALSE;
   pen->tracks = NULL;
   pen->text.fontname = pen->text.content = NULL;
   // 由于窗口绘制有延时,在画笔复位完成时,
@@ -116,19 +118,34 @@ void gtk_shot_pen_save_line_track(GtkShotPen *pen
   GdkPoint *last = pen->tracks
                       ? (GdkPoint*) pen->tracks->data
                         : NULL;
-  g_return_if_fail(!last || !gdk_point_is_equal(*last, pen->end));
-
-  last = g_new(GdkPoint, 1);
-  gdk_point_assign(*last, pen->end);
-  pen->tracks = g_slist_prepend(pen->tracks, last);
+  if (!last || !gdk_point_is_equal(*last, pen->end)) {
+    last = g_new(GdkPoint, 1);
+    gdk_point_assign(*last, pen->end);
+    pen->tracks = g_slist_prepend(pen->tracks, last);
+  }
 }
 
 void gtk_shot_pen_draw_rectangle(GtkShotPen *pen, cairo_t *cr) {
   PREPARE_PEN_AND_CAIRO(pen, cr);
 
-  cairo_rectangle(cr, pen->start.x, pen->start.y
-                    , pen->end.x - pen->start.x
-                    , pen->end.y - pen->start.y);
+  if (!pen->square) {
+    cairo_rectangle(cr, pen->start.x, pen->start.y
+                      , pen->end.x - pen->start.x
+                      , pen->end.y - pen->start.y);
+  } else {
+    // 以起点和终点连线为矩形的对角线
+    gfloat x0 = pen->start.x, y0 = pen->start.y;
+    gfloat x1 = pen->end.x, y1 = pen->end.y;
+    gfloat x2 = ((x1 + x0) - (y1 - y0)) / 2.0;
+    gfloat y2 = ((y1 + y0) - (x0 - x1)) / 2.0;
+    gfloat x3 = ((y1 - y0) + (x1 + x0)) / 2.0;
+    gfloat y3 = ((y1 + y0) + (x0 - x1)) / 2.0;
+    cairo_line_to(cr, x2, y2);
+    cairo_line_to(cr, x1, y1);
+    cairo_line_to(cr, x3, y3);
+    cairo_line_to(cr, x0, y0);
+    cairo_close_path(cr);
+  }
   cairo_stroke(cr);
 }
 
@@ -143,7 +160,7 @@ void gtk_shot_pen_draw_ellipse(GtkShotPen *pen, cairo_t *cr) {
                     , (pen->start.y + pen->end.y) / 2.0);
   dx = MAX(dx, 1);
   dy = MAX(dy, 1);
-  cairo_scale(cr, 1.0, ((gfloat) dy) / dx);
+  cairo_scale(cr, 1.0, pen->square ? 1.0 : ((gfloat) dy) / dx);
   cairo_arc(cr, 0, 0, dx / 2.0, 0, 2 * M_PI);
   cairo_restore(cr);
 
@@ -215,10 +232,12 @@ void gtk_shot_pen_draw_line(GtkShotPen *pen, cairo_t *cr) {
   // 从尾部到头部画线
   cairo_move_to(cr, pen->end.x, pen->end.y);
 
-  GSList *l = pen->tracks;
-  for (l; l; l = l->next) {
-    GdkPoint *p = (GdkPoint*) l->data;
-    cairo_line_to(cr, p->x, p->y);
+  if (!pen->square) {
+    GSList *l = pen->tracks;
+    for (l; l; l = l->next) {
+      GdkPoint *p = (GdkPoint*) l->data;
+      cairo_line_to(cr, p->x, p->y);
+    }
   }
   cairo_line_to(cr, pen->start.x, pen->start.y);
   cairo_stroke(cr);

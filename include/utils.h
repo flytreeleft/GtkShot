@@ -35,13 +35,19 @@ extern "C" {
 #ifndef ABS
   #define ABS(x) ((x) < 0 ? -(x) : (x))
 #endif
-/**
- * cairo的RGB颜色值为0 ~ 1, 需对R/G/B值分别除以255.0
- */
 #define RGB(r, g, b) ( ((r) << 16) | ((g) << 8) | ((b) << 0) )
 #define RGB_R(rgb) ( ((rgb) & 0xff0000) >> 16 )
 #define RGB_G(rgb) ( ((rgb) & 0x00ff00) >> 8 )
 #define RGB_B(rgb) ( ((rgb) & 0x0000ff) >> 0 )
+/** cairo的RGB颜色值为0 ~ 1, 需对R/G/B值分别除以255.0 */
+#define SET_CAIRO_RGB(cr, rgb) \
+          cairo_set_source_rgb(cr, RGB_R(rgb) / 255.0 \
+                                  , RGB_G(rgb) / 255.0 \
+                                  , RGB_B(rgb) / 255.0)
+#define SET_CAIRO_RGBA(cr, rgb, a) \
+          cairo_set_source_rgba(cr, RGB_R(rgb) / 255.0 \
+                                  , RGB_G(rgb) / 255.0 \
+                                  , RGB_B(rgb) / 255.0, a)
 
 /** 在BOX中加入控件,并取消控件的可聚焦性,防止按钮上出现TAB键切换聚焦的虚线 */
 #define pack_to_box(box, thing) \

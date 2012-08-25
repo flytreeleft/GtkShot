@@ -1,7 +1,8 @@
+dnl Process this file with autoconf to produce a configure script.
+
 AC_INIT([GtkShot], [2.0], [crazydan0@126.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([Makefile src/Makefile po/Makefile])
 
 AC_LANG_C
 AM_PROG_LIBTOOL
@@ -12,8 +13,9 @@ AM_PROG_CC_STDC
 AM_PROG_CC_C_O
 AC_HEADER_STDC
 
-#AM_GLIB_GNU_GETTEXT
-#IT_PROG_INTLTOOL([0.40.0])
+ALL_LINGUAS="zh_CN zh_TW"
+AM_GLIB_GNU_GETTEXT
+IT_PROG_INTLTOOL([0.40.0])
 
 AC_DEFINE([GTK_SHOT_NAME], ["@S|@{PACKAGE_NAME}"], [The name of programme])
 AC_DEFINE([GTK_SHOT_VERSION], ["@S|@{PACKAGE_VERSION}"], [The version of programme])
@@ -40,7 +42,15 @@ PKG_CHECK_MODULES(X11, [$pkg_modules])
 AC_SUBST(X11_CFLAGS)
 AC_SUBST(X11_LIBS)
 
-AC_OUTPUT
+GETTEXT_PACKAGE=gtkshot
+AC_SUBST(GETTEXT_PACKAGE)
+AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$GETTEXT_PACKAGE", [Gettext package.])
+
+AC_OUTPUT([
+Makefile
+src/Makefile
+po/Makefile.in
+])
 
 echo
 echo $PACKAGE_NAME....................... : Version $PACKAGE_VERSION

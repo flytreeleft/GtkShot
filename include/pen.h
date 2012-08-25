@@ -48,6 +48,7 @@ struct _GtkShotPen {
   GtkShotPenType type;
   GdkPoint start, end;
   gint size, color;
+  gboolean square; // 绘制正方形/圆形/直线
   union {
     struct {
       gchar *fontname; // 注: 使用动态开辟的空间

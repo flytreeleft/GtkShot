@@ -4,7 +4,9 @@ AM_CPPFLAGS = \
 		$(GTK_CFLAGS) \
 		-I$(top_srcdir) \
 		-I$(top_srcdir)/include \
-		-I$(top_srcdir)/resource
+		-I$(top_srcdir)/resource \
+		-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
+		-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\"
 
 bin_PROGRAMS = gtkshot
 gtkshot_SOURCES = \

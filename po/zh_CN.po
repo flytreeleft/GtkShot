@@ -1,0 +1,134 @@
+# GtkShot Translation.
+# Copyright (C) 2012
+# This file is distributed under the same license as the GtkShot package.
+# dengjun <flytreeleft@126.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.1\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-08-25 22:01+0800\n"
+"PO-Revision-Date: 2012-08-25 22:01+0800\n"
+"Last-Translator: dengjun <flytreeleft@126.com>\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Pootle 2.0.5\n"
+"X-Poedit-Language: Chinese\n"
+"X-Poedit-Country: China\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: ../src/pen-editor.c:34
+msgid "white"
+msgstr "白色"
+
+#: ../src/pen-editor.c:35
+msgid "silver"
+msgstr "银色"
+
+#: ../src/pen-editor.c:36
+msgid "red"
+msgstr "红色"
+
+#: ../src/pen-editor.c:37
+msgid "yellow"
+msgstr "黄色"
+
+#: ../src/pen-editor.c:38
+msgid "lime"
+msgstr "黄绿色"
+
+#: ../src/pen-editor.c:39
+msgid "blue"
+msgstr "蓝色"
+
+#: ../src/pen-editor.c:40
+msgid "fuchsia"
+msgstr "紫红色"
+
+#: ../src/pen-editor.c:41
+msgid "cyan"
+msgstr "青绿色"
+
+#: ../src/pen-editor.c:42
+msgid "black"
+msgstr "黑色"
+
+#: ../src/pen-editor.c:43
+msgid "gray"
+msgstr "灰色"
+
+#: ../src/pen-editor.c:44
+msgid "maroon"
+msgstr "褐红色"
+
+#: ../src/pen-editor.c:45
+msgid "olive"
+msgstr "黄褐色"
+
+#: ../src/pen-editor.c:46
+msgid "green"
+msgstr "绿色"
+
+#: ../src/pen-editor.c:47
+msgid "navy"
+msgstr "深蓝色"
+
+#: ../src/pen-editor.c:48
+msgid "purple"
+msgstr "紫色"
+
+#: ../src/pen-editor.c:49
+msgid "teal"
+msgstr "蓝绿色"
+
+#: ../src/pen-editor.c:171
+msgid "small"
+msgstr "小"
+
+#: ../src/pen-editor.c:182
+msgid "normal"
+msgstr "中"
+
+#: ../src/pen-editor.c:191
+msgid "big"
+msgstr "大"
+
+#: ../src/toolbar.c:36
+msgid "draw rectangle"
+msgstr "绘制矩形"
+
+#: ../src/toolbar.c:37
+msgid "draw ellipse"
+msgstr "绘制椭圆"
+
+#: ../src/toolbar.c:38
+msgid "draw arrow"
+msgstr "绘制箭头"
+
+#: ../src/toolbar.c:39
+msgid "draw line"
+msgstr "绘制线条"
+
+#: ../src/toolbar.c:40
+msgid "draw text"
+msgstr "输入文字"
+
+#: ../src/toolbar.c:179
+msgid "undo"
+msgstr "撤销"
+
+#: ../src/toolbar.c:184
+msgid "save to file"
+msgstr "保存到文件"
+
+#: ../src/toolbar.c:190
+msgid "exit"
+msgstr "退出"
+
+#: ../src/toolbar.c:195
+msgid "finish"
+msgstr "完成"

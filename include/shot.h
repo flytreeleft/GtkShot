@@ -147,6 +147,8 @@ void gtk_shot_get_section(GtkShot *shot
                               , gint *x1, gint *y1);
 GdkPixbuf* gtk_shot_get_section_pixbuf(GtkShot *shot);
 void gtk_shot_save_section_to_clipboard(GtkShot *shot);
+void gtk_shot_save_section_to_file(GtkShot *shot);
+void gtk_shot_record(GtkShot *shot);
 
 void gtk_shot_set_pen(GtkShot *shot, GtkShotPen *pen);
 void gtk_shot_save_pen(GtkShot *shot, gboolean reset);
