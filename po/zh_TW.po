@@ -85,7 +85,7 @@ msgstr "藍綠色"
 
 #: ../src/pen-editor.c:171
 msgid "small"
-msgstr "小"
+msgstr "細"
 
 #: ../src/pen-editor.c:182
 msgid "normal"
@@ -93,7 +93,7 @@ msgstr "中"
 
 #: ../src/pen-editor.c:191
 msgid "big"
-msgstr "大"
+msgstr "粗"
 
 #: ../src/toolbar.c:36
 msgid "draw rectangle"
