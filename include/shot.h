@@ -45,6 +45,8 @@ typedef struct _GtkShot GtkShot;
 #define GTK_SHOT_SECTION_BORDER 2
 /* The color of selection of capture */
 #define GTK_SHOT_SECTION_COLOR 0x00ff00
+/* The count of trying grab key */
+#define GRAB_KEY_TRY_COUNT 0
 
 #define GTK_SHOT_TYPE    (gtk_shot_get_type())
 #define GTK_SHOT(obj) \

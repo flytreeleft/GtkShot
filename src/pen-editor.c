@@ -148,6 +148,10 @@ void gtk_shot_pen_editor_hide(GtkShotPenEditor *editor) {
   gtk_widget_hide_all(GTK_WIDGET(editor->window));
 }
 
+gboolean gtk_shot_pen_editor_visible(GtkShotPenEditor *editor) {
+  return editor && gtk_widget_get_visible(GTK_WIDGET(editor->window));
+}
+
 void gtk_shot_pen_editor_set_pen(GtkShotPenEditor *editor
                                           , GtkShotPen *pen) {
   g_return_if_fail(editor);

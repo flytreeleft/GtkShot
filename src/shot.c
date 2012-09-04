@@ -132,6 +132,7 @@ void gtk_shot_init(GtkShot *shot) {
 
   gtk_window_set_decorated(GTK_WINDOW(shot), FALSE);
   gtk_window_set_keep_above(GTK_WINDOW(shot), TRUE);
+  gtk_widget_set_can_focus(GTK_WIDGET(shot), TRUE);
   //gtk_window_set_skip_taskbar_hint(GTK_WINDOW(shot), TRUE);
   // 背景可透明
   GdkScreen *screen = gtk_widget_get_screen(GTK_WIDGET(shot));
@@ -199,6 +200,7 @@ void gtk_shot_finalize(GObject *obj) {
 void gtk_shot_destroy(GtkShot *shot) {
   g_return_if_fail(IS_GTK_SHOT(shot));
 
+  gdk_keyboard_ungrab(GDK_CURRENT_TIME);
   gtk_widget_destroy(GTK_WIDGET(shot));
 }
 
@@ -625,6 +627,9 @@ gboolean on_shot_key_press(GtkWidget *widget
         shot->section.height = shot->height + 2 * shot->section.border;
         gtk_shot_refresh(shot);
         gtk_shot_show_toolbar(shot);
+        if (gtk_shot_pen_editor_visible(shot->pen_editor)) {
+          gtk_shot_pen_editor_show(shot->pen_editor);
+        }
         break;
       case GDK_d: // dynamic
         break;
@@ -1035,7 +1040,7 @@ void gtk_shot_grab_keyboard(GtkShot *shot) {
                                 , FALSE
                                 , GDK_CURRENT_TIME)
             != GDK_GRAB_SUCCESS) {
-    if (i++ < 10) {
+    if (i++ < GRAB_KEY_TRY_COUNT) {
       debug("grab keyboard again after 0.1s ...\n");
       sleep(0.1);
     } else {

@@ -140,6 +140,7 @@ void gtk_shot_pen_draw_rectangle(GtkShotPen *pen, cairo_t *cr) {
     gfloat y2 = ((y1 + y0) - (x0 - x1)) / 2.0;
     gfloat x3 = ((y1 - y0) + (x1 + x0)) / 2.0;
     gfloat y3 = ((y1 + y0) + (x0 - x1)) / 2.0;
+    cairo_move_to(cr, x0, y0);
     cairo_line_to(cr, x2, y2);
     cairo_line_to(cr, x1, y1);
     cairo_line_to(cr, x3, y3);
@@ -151,6 +152,11 @@ void gtk_shot_pen_draw_rectangle(GtkShotPen *pen, cairo_t *cr) {
 
 void gtk_shot_pen_draw_ellipse(GtkShotPen *pen, cairo_t *cr) {
   PREPARE_PEN_AND_CAIRO(pen, cr);
+  // 椭圆/圆的绘制路径终点在直径的右侧,故移动到该位置
+  // 防止多余线条的绘制
+  // 绘制起点见: http://www.cairographics.org/manual/cairo-Paths.html#cairo-arc
+  cairo_move_to(cr, MAX(pen->start.x, pen->end.x)
+                  , (pen->start.y + pen->end.y) / 2.0);
 
   gint dx = ABS(pen->end.x - pen->start.x);
   gint dy = ABS(pen->end.y - pen->start.y);

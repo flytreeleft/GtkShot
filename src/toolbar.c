@@ -100,6 +100,10 @@ void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar) {
   gtk_widget_hide_all(GTK_WIDGET(toolbar->window));
 }
 
+gboolean gtk_shot_toolbar_visible(GtkShotToolbar *toolbar) {
+  return toolbar && gtk_widget_get_visible(GTK_WIDGET(toolbar->window));
+}
+
 gboolean on_change_pen(GtkToggleButton *btn
                                 , GtkShotToolbar *toolbar) {
   GList *l = gtk_container_get_children(GTK_CONTAINER(toolbar->pen_box));
