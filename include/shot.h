@@ -33,7 +33,6 @@ typedef struct _GtkShot GtkShot;
 #include "pen.h"
 #include "input.h"
 #include "toolbar.h"
-#include "pen-editor.h"
 
 /* The border of anchor */
 #define GTK_SHOT_ANCHOR_BORDER 6
@@ -122,7 +121,6 @@ struct _GtkShot {
   GdkPoint move_start, move_end; // 移动时的起点和终点
 
   GtkShotToolbar *toolbar; // 工具条
-  GtkShotPenEditor *pen_editor; // 画笔编辑器
   GtkShotPen *pen; // 当前使用的画笔
   GSList *historic_pen; // 历史画笔
   GtkShotInput *input; // 文本输入窗口
@@ -153,7 +151,7 @@ void gtk_shot_save_section_to_file(GtkShot *shot);
 void gtk_shot_record(GtkShot *shot);
 
 void gtk_shot_set_pen(GtkShot *shot, GtkShotPen *pen);
-void gtk_shot_save_pen(GtkShot *shot, gboolean reset);
+void gtk_shot_save_pen(GtkShot *shot);
 void gtk_shot_remove_pen(GtkShot *shot);
 void gtk_shot_undo_pen(GtkShot *shot);
 gboolean gtk_shot_has_empty_historic_pen(GtkShot *shot);

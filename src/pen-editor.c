@@ -62,6 +62,7 @@ static gboolean on_color_button_expose(GtkWidget *widget
                                           , GdkEventExpose *event
                                           , gpointer *color);
 
+static void switch_font_size_box(GtkShotPenEditor *editor);
 static GtkBox* create_size_box(GtkShotPenEditor *editor);
 static GtkBox* create_font_box(GtkShotPenEditor *editor);
 static GtkBox* create_color_box(GtkShotPenEditor *editor);
@@ -93,7 +94,6 @@ GtkShotPenEditor* gtk_shot_pen_editor_new(GtkShot *shot) {
   editor->right_box = right_box;
   editor->size_box = size_box;
   editor->font_box = font_box;
-  editor->x = editor->y = 0;
   editor->width = width;
   editor->height = height;
 
@@ -105,15 +105,44 @@ GtkShotPenEditor* gtk_shot_pen_editor_new(GtkShot *shot) {
 }
 
 void gtk_shot_pen_editor_destroy(GtkShotPenEditor *editor) {
-  g_return_if_fail(editor);
-
-  gtk_widget_destroy(GTK_WIDGET(editor->window));
-  g_free(editor);
+  if (editor) {
+    gtk_widget_destroy(GTK_WIDGET(editor->window));
+    g_free(editor);
+  }
 }
 
 void gtk_shot_pen_editor_show(GtkShotPenEditor *editor) {
-  g_return_if_fail(editor && editor->pen);
+  if (!gtk_shot_pen_editor_visible(editor) && editor->pen) {
+    switch_font_size_box(editor);
+    gtk_widget_show_all(GTK_WIDGET(editor->window));
+  }
+}
+
+void gtk_shot_pen_editor_hide(GtkShotPenEditor *editor) {
+  if (gtk_shot_pen_editor_visible(editor)) {
+    // 取消所有按钮的激活态
+    GList *l = gtk_container_get_children(GTK_CONTAINER(editor->size_box));
+    set_all_toggle_button_inactive(l);
+    gtk_widget_hide_all(GTK_WIDGET(editor->window));
+  }
+}
+
+void gtk_shot_pen_editor_set_pen(GtkShotPenEditor *editor
+                                          , GtkShotPen *pen) {
+  if (!editor) return;
   
+  if (pen) {
+    pen->color = editor->color;
+    if (pen->type == GTK_SHOT_PEN_TEXT) {
+      pen->text.fontname = g_strdup(editor->fontname);
+    } else {
+      pen->size = editor->size;
+    }
+  }
+  editor->pen = pen;
+}
+
+void switch_font_size_box(GtkShotPenEditor *editor) {
   GList *l =
         gtk_container_get_children(GTK_CONTAINER(editor->left_box));
   GtkWidget *child = GTK_WIDGET(g_list_nth_data(l, 0));
@@ -134,37 +163,6 @@ void gtk_shot_pen_editor_show(GtkShotPenEditor *editor) {
     gtk_container_add(GTK_CONTAINER(editor->left_box)
                             , GTK_WIDGET(editor->size_box));
   }
-
-  gtk_widget_show_all(GTK_WIDGET(editor->window));
-  gtk_window_move(editor->window, editor->x, editor->y);
-}
-
-void gtk_shot_pen_editor_hide(GtkShotPenEditor *editor) {
-  g_return_if_fail(editor);
-
-  // 取消所有按钮的激活态
-  GList *l = gtk_container_get_children(GTK_CONTAINER(editor->size_box));
-  set_all_toggle_button_inactive(l);
-  gtk_widget_hide_all(GTK_WIDGET(editor->window));
-}
-
-gboolean gtk_shot_pen_editor_visible(GtkShotPenEditor *editor) {
-  return editor && gtk_widget_get_visible(GTK_WIDGET(editor->window));
-}
-
-void gtk_shot_pen_editor_set_pen(GtkShotPenEditor *editor
-                                          , GtkShotPen *pen) {
-  g_return_if_fail(editor);
-  
-  if (pen) {
-    pen->color = editor->color;
-    if (pen->type == GTK_SHOT_PEN_TEXT) {
-      pen->text.fontname = g_strdup(editor->fontname);
-    } else {
-      pen->size = editor->size;
-    }
-  }
-  editor->pen = pen;
 }
 
 GtkBox* create_size_box(GtkShotPenEditor *editor) {

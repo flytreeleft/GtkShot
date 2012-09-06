@@ -89,8 +89,13 @@ void gtk_shot_pen_reset(GtkShotPen *pen) {
   g_return_if_fail(pen);
 
   pen->square = FALSE;
-  pen->tracks = NULL;
-  pen->text.fontname = pen->text.content = NULL;
+  if (pen->type == GTK_SHOT_PEN_TEXT) {
+    // 新建引用,便于资源正确释放
+    pen->text.fontname = g_strdup(pen->text.fontname);
+    pen->text.content = NULL;
+  } else {
+    pen->tracks = NULL;
+  }
   // 由于窗口绘制有延时,在画笔复位完成时,
   // 窗口可能还未完成绘制,故将画笔的起始位置进行调整,
   // 使其不可见 :-(

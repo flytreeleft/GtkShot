@@ -24,7 +24,6 @@
 
 #include "xpm.h"
 #include "shot.h"
-#include "pen.h"
 #include "toolbar.h"
 
 typedef struct _PenButton {
@@ -50,6 +49,8 @@ static gboolean on_save_to_file(GtkButton *btn
 static gboolean on_save_to_clipboard(GtkButton *btn
                                         , GtkShotToolbar *toolbar); 
 static gboolean on_quit(GtkButton *btn, GtkShotToolbar *toolbar);
+
+static void adjust_toolbar(GtkShotToolbar *toolbar);
 static GtkBox* create_pen_box(GtkShotToolbar *toolbar);
 static GtkBox* create_op_box(GtkShotToolbar *toolbar);
 
@@ -69,8 +70,8 @@ GtkShotToolbar* gtk_shot_toolbar_new(GtkShot *shot) {
   gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(hbox));
 
   toolbar->shot = shot;
+  toolbar->pen_editor = gtk_shot_pen_editor_new(shot);
   toolbar->window = window;
-  toolbar->x = toolbar->y = 0;
   toolbar->width = width;
   toolbar->height = height;
 
@@ -78,30 +79,28 @@ GtkShotToolbar* gtk_shot_toolbar_new(GtkShot *shot) {
 }
 
 void gtk_shot_toolbar_destroy(GtkShotToolbar *toolbar) {
-  g_return_if_fail(toolbar);
-
-  gtk_widget_destroy(GTK_WIDGET(toolbar->window));
-  g_free(toolbar);
+  if (toolbar) {
+    gtk_shot_pen_editor_destroy(toolbar->pen_editor);
+    gtk_widget_destroy(GTK_WIDGET(toolbar->window));
+    g_free(toolbar);
+  }
 }
 
 void gtk_shot_toolbar_show(GtkShotToolbar *toolbar) {
-  g_return_if_fail(toolbar);
-
-  gtk_widget_show_all(GTK_WIDGET(toolbar->window));
-  gtk_window_move(toolbar->window, toolbar->x, toolbar->y);
+  if (!gtk_shot_toolbar_visible(toolbar)) {
+    adjust_toolbar(toolbar);
+    gtk_widget_show_all(GTK_WIDGET(toolbar->window));
+  }
 }
 
 void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar) {
-  g_return_if_fail(toolbar);
-
-  // 取消所有按钮的激活态
-  GList *l = gtk_container_get_children(GTK_CONTAINER(toolbar->pen_box));
-  set_all_toggle_button_inactive(l);
-  gtk_widget_hide_all(GTK_WIDGET(toolbar->window));
-}
-
-gboolean gtk_shot_toolbar_visible(GtkShotToolbar *toolbar) {
-  return toolbar && gtk_widget_get_visible(GTK_WIDGET(toolbar->window));
+  if (gtk_shot_toolbar_visible(toolbar)) {
+    gtk_shot_pen_editor_hide(toolbar->pen_editor);
+    // 取消所有按钮的激活态
+    GList *l = gtk_container_get_children(GTK_CONTAINER(toolbar->pen_box));
+    set_all_toggle_button_inactive(l);
+    gtk_widget_hide_all(GTK_WIDGET(toolbar->window));
+  }
 }
 
 gboolean on_change_pen(GtkToggleButton *btn
@@ -113,6 +112,8 @@ gboolean on_change_pen(GtkToggleButton *btn
   if (!btn->active && !act) {
     // 没有已激活的按钮,则移除画笔
     gtk_shot_remove_pen(toolbar->shot);
+    gtk_shot_pen_editor_set_pen(toolbar->pen_editor, NULL);
+    gtk_shot_pen_editor_hide(toolbar->pen_editor);
   } else if (btn->active) {
     if (act) { // 取消其他已激活按钮的激活状态
       gtk_toggle_button_set_active(act, FALSE);
@@ -120,7 +121,10 @@ gboolean on_change_pen(GtkToggleButton *btn
     GtkShotPenType type = (GtkShotPenType)
                 GPOINTER_TO_INT(g_object_get_data(G_OBJECT(btn)
                                               , "pen-type"));
-    gtk_shot_set_pen(toolbar->shot, gtk_shot_pen_new(type));
+    GtkShotPen *pen = gtk_shot_pen_new(type);
+    gtk_shot_set_pen(toolbar->shot, pen);
+    gtk_shot_pen_editor_set_pen(toolbar->pen_editor, pen);
+    gtk_shot_pen_editor_show(toolbar->pen_editor);
   }
 
   return TRUE;
@@ -202,4 +206,45 @@ GtkBox* create_op_box(GtkShotToolbar *toolbar) {
   pack_to_box(box, btn);
 
   return box;
+}
+
+void adjust_toolbar(GtkShotToolbar *toolbar) {
+  GtkShot *shot = toolbar->shot;
+  gint x = 0, y = 0, x0, y0, x1, y1;
+  gint b = MAX(shot->section.border, shot->anchor_border);
+  gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
+
+  // 扩展到锚点外部矩形范围
+  x0 -= b;
+  y0 -= b;
+  x1 += b;
+  y1 += b;
+  // 限定在MASK区域,并转换坐标系为相对于MASK的坐标系
+  x0 = MAX(x0, shot->x) - shot->x;
+  y0 = MAX(y0, shot->y) - shot->y;
+  x1 = MIN(x1, shot->x + shot->width) - shot->x;
+  y1 = MIN(y1, shot->y + shot->height) - shot->y;
+
+  x = x0 + ((x1 - x0) - toolbar->width) / 2;
+  x = MAX(MIN(x, shot->width - toolbar->width), 0);
+#define TS_SPACE  2
+  if (y1 <= shot->height
+              - toolbar->height
+              - toolbar->pen_editor->height
+              - TS_SPACE) {
+    y = y1;
+  } else {
+    y = MAX(y0 - toolbar->height, 0);
+  }
+  x += shot->x; y += shot->y;
+
+  gtk_shot_toolbar_move(toolbar, x, y);
+  if (y != y1 && y0 >= toolbar->height
+                        + toolbar->pen_editor->height
+                        + TS_SPACE) {
+    y -= toolbar->pen_editor->height + TS_SPACE;
+  } else {
+    y += toolbar->height + TS_SPACE;
+  }
+  gtk_shot_pen_editor_move(toolbar->pen_editor, x, y);
 }

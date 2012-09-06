@@ -123,7 +123,6 @@ void gtk_shot_init(GtkShot *shot) {
   shot->cursor_pos = OUTER_OF_SECTION;
   shot->historic_pen = NULL;
   shot->pen = NULL;
-  shot->pen_editor = gtk_shot_pen_editor_new(shot);
   shot->toolbar = gtk_shot_toolbar_new(shot);
   shot->input = gtk_shot_input_new(shot);
   shot->screen_pixbuf = NULL;
@@ -186,8 +185,6 @@ void gtk_shot_finalize(GObject *obj) {
   shot->pen = NULL;
   gtk_shot_clean_historic_pen(shot);
   shot->historic_pen = NULL;
-  gtk_shot_pen_editor_destroy(shot->pen_editor);
-  shot->pen_editor = NULL;
   gtk_shot_toolbar_destroy(shot->toolbar);
   shot->toolbar = NULL;
   gtk_shot_input_destroy(shot->input);
@@ -344,12 +341,10 @@ void gtk_shot_hide_toolbar(GtkShot *shot) {
   g_return_if_fail(IS_GTK_SHOT(shot));
 
   gtk_shot_toolbar_hide(shot->toolbar);
-  gtk_shot_pen_editor_hide(shot->pen_editor);
 }
 
 void gtk_shot_show_toolbar(GtkShot *shot) {
   if (gtk_shot_has_visible_section(shot)) {
-    gtk_shot_adjust_toolbar(shot);
     gtk_shot_toolbar_show(shot->toolbar);
   }
 }
@@ -369,8 +364,6 @@ void gtk_shot_remove_pen(GtkShot *shot) {
   }
   gtk_shot_pen_free(shot->pen);
   shot->pen = NULL;
-  gtk_shot_pen_editor_set_pen(shot->pen_editor, NULL);
-  gtk_shot_pen_editor_hide(shot->pen_editor);
 }
 
 /**
@@ -383,8 +376,6 @@ void gtk_shot_set_pen(GtkShot *shot, GtkShotPen *pen) {
     gtk_shot_input_hide(shot->input);
   }
   shot->pen = pen;
-  gtk_shot_pen_editor_set_pen(shot->pen_editor, pen);
-  gtk_shot_pen_editor_show(shot->pen_editor);
 
   if (pen) {
     shot->mode = EDIT_MODE;
@@ -407,20 +398,13 @@ void gtk_shot_set_pen(GtkShot *shot, GtkShotPen *pen) {
 /**
  * 将画笔添加到历史画笔中(浅拷贝当前画笔)
  */
-void gtk_shot_save_pen(GtkShot *shot, gboolean reset) {
+void gtk_shot_save_pen(GtkShot *shot) {
   g_return_if_fail(IS_GTK_SHOT(shot) && shot->pen);
 
   shot->historic_pen
       = g_slist_append(shot->historic_pen
                         , gtk_shot_pen_flat_copy(shot->pen));
-  if (reset) {
-    gtk_shot_pen_reset(shot->pen);
-  } else if (shot->pen->type == GTK_SHOT_PEN_TEXT) {
-    // 由于是浅拷贝,故需对字体重新拷贝一份
-    shot->pen->text.fontname
-              = g_strdup(shot->pen->text.fontname);
-    shot->pen->text.content = NULL;
-  }
+  gtk_shot_pen_reset(shot->pen);
 }
 
 /** 撤销最后加入的历史画笔 */
@@ -520,7 +504,7 @@ gboolean on_shot_button_release(GtkWidget *widget
       if (shot->pen->type != GTK_SHOT_PEN_TEXT) {
         gdk_point_assign(shot->pen->end, *event);
         // 将画笔放到历史链表
-        gtk_shot_save_pen(shot, TRUE);
+        gtk_shot_save_pen(shot);
       }
       break;
   }
@@ -627,9 +611,6 @@ gboolean on_shot_key_press(GtkWidget *widget
         shot->section.height = shot->height + 2 * shot->section.border;
         gtk_shot_refresh(shot);
         gtk_shot_show_toolbar(shot);
-        if (gtk_shot_pen_editor_visible(shot->pen_editor)) {
-          gtk_shot_pen_editor_show(shot->pen_editor);
-        }
         break;
       case GDK_d: // dynamic
         break;
@@ -658,6 +639,7 @@ gboolean on_shot_key_release(GtkWidget *widget
 void gtk_shot_process_edit_mode(GtkShot *shot
                                     , GdkEventButton *event) {
   if (shot->pen->type != GTK_SHOT_PEN_TEXT) {
+    shot->pen->square = FALSE;
     gdk_point_assign(shot->pen->start, *event);
     gdk_point_assign(shot->pen->end, *event);
   } else {
@@ -671,10 +653,9 @@ void gtk_shot_process_edit_mode(GtkShot *shot
       char *text = gtk_shot_input_get_text(shot->input);
       if (text != NULL && strlen(text) > 0) {
         shot->pen->text.content = text;
-        gtk_shot_save_pen(shot, FALSE);
-        gtk_shot_refresh(shot);
+        gtk_shot_save_pen(shot);
         gtk_shot_input_hide(shot->input);
-        gtk_shot_grab_keyboard(shot);
+        gtk_shot_refresh(shot);
       } else {
         // 弹出文本输入框,接受输入
         gtk_shot_input_set_font(shot->input
@@ -881,46 +862,6 @@ void gtk_shot_adjust_section(GtkShot *shot, gint x0, gint y0
   shot->section.y = MIN(y0, y1);
   shot->section.width = ABS(x0 - x1);
   shot->section.height = ABS(y0 -y1);
-}
-
-void gtk_shot_adjust_toolbar(GtkShot *shot) {
-  gint x = 0, y = 0, x0, y0, x1, y1;
-  gint b = MAX(shot->section.border, shot->anchor_border);
-  gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
-
-  // 扩展到锚点外部矩形范围
-  x0 -= b;
-  y0 -= b;
-  x1 += b;
-  y1 += b;
-  // 限定在MASK区域,并转换坐标系为相对于MASK的坐标系
-  x0 = MAX(x0, shot->x) - shot->x;
-  y0 = MAX(y0, shot->y) - shot->y;
-  x1 = MIN(x1, shot->x + shot->width) - shot->x;
-  y1 = MIN(y1, shot->y + shot->height) - shot->y;
-
-  x = x0 + ((x1 - x0) - shot->toolbar->width) / 2;
-  x = MAX(MIN(x, shot->width - shot->toolbar->width), 0);
-#define TS_SPACE  2
-  if (y1 <= shot->height
-              - shot->toolbar->height
-              - shot->pen_editor->height
-              - TS_SPACE) {
-    y = y1;
-  } else {
-    y = MAX(y0 - shot->toolbar->height, 0);
-  }
-  x += shot->x; y += shot->y;
-
-  shot->toolbar->x = x; shot->toolbar->y = y;
-  if (y != y1 && y0 >= shot->toolbar->height
-                        + shot->pen_editor->height
-                        + TS_SPACE) {
-    y -= shot->pen_editor->height + TS_SPACE;
-  } else {
-    y += shot->toolbar->height + TS_SPACE;
-  }
-  shot->pen_editor->x = x; shot->pen_editor->y = y;
 }
 
 /**
