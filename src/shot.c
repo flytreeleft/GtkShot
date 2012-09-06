@@ -77,8 +77,10 @@ static void gtk_shot_draw_anchor(GtkShot *shot, cairo_t *cr);
 static void gtk_shot_draw_message(GtkShot *shot, cairo_t *cr);
 static void gtk_shot_clean_section(GtkShot *shot);
 static void gtk_shot_clean_historic_pen(GtkShot *shot);
+static void gtk_shot_whole_section(GtkShot *shot);
 static void gtk_shot_move_section(GtkShot *shot, gint dx, gint dy);
-static void gtk_shot_resize_section(GtkShot *shot, gint x, gint y);
+static void gtk_shot_resize_section(GtkShot *shot, gint dx, gint dy);
+static void gtk_shot_zoom_section(GtkShot *shot, gint x, gint y);
 static void gtk_shot_adjust_section(GtkShot *shot, gint x0, gint y0
                                                 , gint x1, gint y1);
 static void gtk_shot_get_zoom_anchor(GtkShot *shot, GdkPoint anchor[8]);
@@ -535,7 +537,7 @@ gboolean on_shot_motion_notify(GtkWidget *widget
                                   , cursor.y - shot->move_start.y);
         break;
       case ZOOM_MODE:
-        gtk_shot_resize_section(shot, cursor.x, cursor.y);
+        gtk_shot_zoom_section(shot, cursor.x, cursor.y);
         gtk_shot_change_cursor(shot);
         break;
       case EDIT_MODE:
@@ -582,14 +584,11 @@ gboolean on_shot_key_press(GtkWidget *widget
     case GDK_Left: dx -= 2;
     case GDK_KP_Right:
     case GDK_Right: dx += 1;
+      if (shot->mode == EDIT_MODE) break;
       if (!is_ctrl) { // move
         gtk_shot_move_section(shot, dx, dy);
       } else { // resize
-        gint w = ABS(shot->section.width + dx);
-        gint h = ABS(shot->section.height + dy);
-        if (w == 0 || h == 0) break;
-        shot->section.width = w;
-        shot->section.height = h;
+        gtk_shot_resize_section(shot, dx, dy);
       }
       gtk_shot_refresh(shot);
       gtk_shot_show_toolbar(shot);
@@ -605,10 +604,8 @@ gboolean on_shot_key_press(GtkWidget *widget
         gtk_shot_hide(shot);
         break;
       case GDK_a: // select whole
-        shot->section.x = shot->x - shot->section.border;
-        shot->section.y = shot->y - shot->section.border;
-        shot->section.width = shot->width + 2 * shot->section.border;
-        shot->section.height = shot->height + 2 * shot->section.border;
+        if (shot->mode == EDIT_MODE) break;
+        gtk_shot_whole_section(shot);
         gtk_shot_refresh(shot);
         gtk_shot_show_toolbar(shot);
         break;
@@ -806,6 +803,13 @@ void gtk_shot_clean_historic_pen(GtkShot *shot) {
   shot->historic_pen = NULL;
 }
 
+void gtk_shot_whole_section(GtkShot *shot) {
+  shot->section.x = shot->x - shot->section.border;
+  shot->section.y = shot->y - shot->section.border;
+  shot->section.width = shot->width + 2 * shot->section.border;
+  shot->section.height = shot->height + 2 * shot->section.border;
+}
+
 void gtk_shot_move_section(GtkShot *shot, gint dx, gint dy) {
   shot->section.x += dx;
   shot->section.y += dy;
@@ -816,7 +820,17 @@ void gtk_shot_move_section(GtkShot *shot, gint dx, gint dy) {
   shot->move_end.y += dy;
 }
 
-void gtk_shot_resize_section(GtkShot *shot, gint x, gint y) {
+void gtk_shot_resize_section(GtkShot *shot, gint dx, gint dy) {
+  gint w = ABS(shot->section.width + dx);
+  gint h = ABS(shot->section.height + dy);
+  
+  if (w != 0 && h != 0) {
+    shot->section.width = w;
+    shot->section.height = h;
+  }
+}
+
+void gtk_shot_zoom_section(GtkShot *shot, gint x, gint y) {
   gint x0, y0, x1, y1;
   x0 = shot->section.x;
   y0 = shot->section.y;

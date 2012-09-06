@@ -1,8 +1,4 @@
 Makefile
-aclocal.m4
-compile
-depcomp
-missing
 *.[oa]
 config.h
 config.log

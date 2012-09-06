@@ -87,10 +87,8 @@ void gtk_shot_toolbar_destroy(GtkShotToolbar *toolbar) {
 }
 
 void gtk_shot_toolbar_show(GtkShotToolbar *toolbar) {
-  if (!gtk_shot_toolbar_visible(toolbar)) {
-    adjust_toolbar(toolbar);
-    gtk_widget_show_all(GTK_WIDGET(toolbar->window));
-  }
+  adjust_toolbar(toolbar);
+  gtk_widget_show_all(GTK_WIDGET(toolbar->window));
 }
 
 void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar) {
