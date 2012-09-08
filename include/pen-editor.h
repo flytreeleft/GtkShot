@@ -36,6 +36,7 @@ struct _GtkShotPenEditor {
   GtkShotPen *pen;
   GtkBox *left_box, *right_box;
   GtkBox *size_box, *font_box;
+  gint x, y;
   gint width, height;
 
   // 当前设置的画笔属性
@@ -49,10 +50,9 @@ void gtk_shot_pen_editor_show(GtkShotPenEditor *editor);
 void gtk_shot_pen_editor_hide(GtkShotPenEditor *editor);
 void gtk_shot_pen_editor_set_pen(GtkShotPenEditor *editor
                                           , GtkShotPen *pen);
+void gtk_shot_pen_editor_move(GtkShotPenEditor *editor, gint x, gint y);
 #define gtk_shot_pen_editor_visible(editor) \
         ((editor) && gtk_widget_get_visible(GTK_WIDGET((editor)->window)))
-#define gtk_shot_pen_editor_move(editor, x, y) \
-        gtk_window_move(editor->window, x, y)
 
 #ifdef __cplusplus
 }

@@ -35,6 +35,7 @@ struct _GtkShotToolbar {
   GtkWindow *window;
   GtkBox *pen_box, *op_box;
   GSList *buttons, *toggle_buttons;
+  gint x, y;
   gint width, height;
 
   GtkShot *shot;
@@ -45,10 +46,9 @@ GtkShotToolbar* gtk_shot_toolbar_new(GtkShot *shot);
 void gtk_shot_toolbar_destroy(GtkShotToolbar *toolbar);
 void gtk_shot_toolbar_show(GtkShotToolbar *toolbar);
 void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar);
+void gtk_shot_toolbar_move(GtkShotToolbar *toolbar, gint x, gint y);
 #define gtk_shot_toolbar_visible(toolbar) \
         ((toolbar) && gtk_widget_get_visible(GTK_WIDGET((toolbar)->window)))
-#define gtk_shot_toolbar_move(toolbar, x, y) \
-        gtk_window_move((toolbar)->window, x, y)
 
 #ifdef __cplusplus
 }

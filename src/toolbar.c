@@ -72,6 +72,8 @@ GtkShotToolbar* gtk_shot_toolbar_new(GtkShot *shot) {
   toolbar->shot = shot;
   toolbar->pen_editor = gtk_shot_pen_editor_new(shot);
   toolbar->window = window;
+  toolbar->x = 0;
+  toolbar->y = 0;
   toolbar->width = width;
   toolbar->height = height;
 
@@ -87,8 +89,10 @@ void gtk_shot_toolbar_destroy(GtkShotToolbar *toolbar) {
 }
 
 void gtk_shot_toolbar_show(GtkShotToolbar *toolbar) {
-  adjust_toolbar(toolbar);
-  gtk_widget_show_all(GTK_WIDGET(toolbar->window));
+  if (toolbar) {
+    adjust_toolbar(toolbar);
+    gtk_widget_show_all(GTK_WIDGET(toolbar->window));
+  }
 }
 
 void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar) {
@@ -98,6 +102,13 @@ void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar) {
     GList *l = gtk_container_get_children(GTK_CONTAINER(toolbar->pen_box));
     set_all_toggle_button_inactive(l);
     gtk_widget_hide_all(GTK_WIDGET(toolbar->window));
+  }
+}
+
+void gtk_shot_toolbar_move(GtkShotToolbar *toolbar, gint x, gint y) {
+  if (toolbar) {
+    toolbar->x = x; toolbar->y = y;
+    gtk_window_move(toolbar->window, x, y);
   }
 }
 

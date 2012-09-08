@@ -94,6 +94,8 @@ GtkShotPenEditor* gtk_shot_pen_editor_new(GtkShot *shot) {
   editor->right_box = right_box;
   editor->size_box = size_box;
   editor->font_box = font_box;
+  editor->x = 0;
+  editor->y = 0;
   editor->width = width;
   editor->height = height;
 
@@ -112,8 +114,9 @@ void gtk_shot_pen_editor_destroy(GtkShotPenEditor *editor) {
 }
 
 void gtk_shot_pen_editor_show(GtkShotPenEditor *editor) {
-  if (!gtk_shot_pen_editor_visible(editor) && editor->pen) {
+  if (editor && editor->pen) {
     switch_font_size_box(editor);
+    gtk_shot_pen_editor_move(editor, editor->x, editor->y);
     gtk_widget_show_all(GTK_WIDGET(editor->window));
   }
 }
@@ -124,6 +127,13 @@ void gtk_shot_pen_editor_hide(GtkShotPenEditor *editor) {
     GList *l = gtk_container_get_children(GTK_CONTAINER(editor->size_box));
     set_all_toggle_button_inactive(l);
     gtk_widget_hide_all(GTK_WIDGET(editor->window));
+  }
+}
+
+void gtk_shot_pen_editor_move(GtkShotPenEditor *editor, gint x, gint y) {
+  if (editor) {
+    editor->x = x; editor->y = y;
+    gtk_window_move(editor->window, x, y);
   }
 }
 
