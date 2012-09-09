@@ -12119,7 +12119,7 @@ $as_echo "#define STDC_HEADERS 1" >>confdefs.h
 fi
 
 
-ALL_LINGUAS="zh_CN zh_TW"
+ALL_LINGUAS="en_US zh_CN zh_TW"
 
    for ac_header in locale.h
 do :

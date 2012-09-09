@@ -2,3 +2,4 @@
 
 src/pen-editor.c
 src/toolbar.c
+src/shot.c
