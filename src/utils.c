@@ -247,7 +247,8 @@ GtkToggleButton*
   return b;
 }
 
-void cairo_draw_text(cairo_t *cr, char *text, char *fontname) {
+PangoLayout* pango_cairo_prepare_layout(cairo_t *cr, char *text
+                                            , char *fontname) {
   // Thanks deepin-screenshot START
   PangoLayout *layout = pango_cairo_create_layout(cr);
   PangoFontDescription *desc
@@ -257,13 +258,19 @@ void cairo_draw_text(cairo_t *cr, char *text, char *fontname) {
   pango_font_description_free(desc);
 
   pango_cairo_update_layout(cr, layout);
-  pango_cairo_show_layout(cr, layout);
   // Thanks deepin-screenshot END
+  return layout;
 }
 
-void cairo_round_rect(cairo_t *cr, gfloat x, gfloat y
-                                  , gfloat width, gfloat height
-                                  , gfloat radius) {
+void cairo_draw_text(cairo_t *cr, char *text, char *fontname) {
+  PangoLayout *layout =
+    pango_cairo_prepare_layout(cr, text, fontname);
+  pango_cairo_show_layout(cr, layout);
+}
+
+void cairo_round_rect(cairo_t *cr, double x, double y
+                                  , double width, double height
+                                  , double radius) {
   cairo_move_to(cr, x + radius, y);
   cairo_line_to(cr, x + width - radius, y);
       
@@ -284,4 +291,31 @@ void cairo_round_rect(cairo_t *cr, gfloat x, gfloat y
                       , 2 * M_PI, M_PI / 2);
   cairo_arc(cr, x + radius, y + height - radius, radius
                       , M_PI / 2, M_PI);
+}
+
+void cairo_round_msg_box(cairo_t *cr, char *msg
+                                , char *fontname
+                                , gint x, gint y
+                                , gint fg_color, gint bg_color
+                                , gfloat bg_opacity
+                                , gint corner_radius
+                                , gint pad_top, gint pad_right
+                                , gint pad_bottom, gint pad_left) {
+  PangoLayout *layout =
+    pango_cairo_prepare_layout(cr, msg, fontname);
+
+  gint width = 0, height = 0;
+  pango_layout_get_pixel_size(layout, &width, &height);
+
+  SET_CAIRO_RGBA(cr, bg_color, bg_opacity);
+  cairo_round_rect(cr, x - pad_left
+                      , y - pad_top
+                      , width + pad_left + pad_right
+                      , height + pad_top + pad_bottom
+                      , corner_radius);
+  cairo_fill(cr);
+
+  SET_CAIRO_RGB(cr, fg_color);
+  cairo_move_to(cr, x, y);
+  pango_cairo_show_layout(cr, layout);
 }

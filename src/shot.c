@@ -33,6 +33,10 @@
 #define IS_IN_RECT(x, y, x0, y0, x1, y1) \
           ( ((x) > (x0) && (x) < (x1)) \
             && ((y) > (y0) && (y) < (y1)) )
+// 每个点pt对应的像素数px,
+// 1px = 1/96英寸; 1pt = 1/72英寸.
+// 参考: http://www.cnblogs.com/chinhr/archive/2008/01/23/1049576.html
+#define PIXEL_PER_POINT (96/72)
 
 // 鼠标位置与鼠标类型的映射
 static GdkCursorType cursor_pos_type[] = {
@@ -75,6 +79,7 @@ static void gtk_shot_draw_doodle(GtkShot *shot, cairo_t *cr);
 static void gtk_shot_draw_mask(GtkShot *shot, cairo_t *cr);
 static void gtk_shot_draw_anchor(GtkShot *shot, cairo_t *cr);
 static void gtk_shot_draw_message(GtkShot *shot, cairo_t *cr);
+static void gtk_shot_draw_tip(GtkShot *shot, cairo_t *cr);
 static void gtk_shot_clean_section(GtkShot *shot);
 static void gtk_shot_clean_historic_pen(GtkShot *shot);
 static void gtk_shot_whole_section(GtkShot *shot);
@@ -87,8 +92,6 @@ static void gtk_shot_get_zoom_anchor(GtkShot *shot, GdkPoint anchor[8]);
 static GtkShotCursorPos gtk_shot_get_cursor_pos(GtkShot *shot
                                                     , gint x, gint y);
 static void gtk_shot_change_cursor(GtkShot *shot);
-static void gtk_shot_adjust_toolbar(GtkShot *shot);
-static void gtk_shot_grab_keyboard(GtkShot *shot);
 
 // Begin of GObject-related stuff
 G_DEFINE_TYPE(GtkShot, gtk_shot, GTK_TYPE_WINDOW)
@@ -112,6 +115,7 @@ void gtk_shot_class_init(GtkShotClass *klass) {
 void gtk_shot_init(GtkShot *shot) {
   // 内部数据的初始化
   shot->mode = NORMAL_MODE;
+  shot->grab_key = TRUE;
   shot->dynamic = FALSE;
   shot->opacity = GTK_SHOT_OPACITY;
   shot->color = GTK_SHOT_COLOR;
@@ -204,19 +208,20 @@ void gtk_shot_destroy(GtkShot *shot) {
 }
 
 void gtk_shot_hide(GtkShot *shot) {
-  g_return_if_fail(IS_GTK_SHOT(shot)
-                      && gtk_widget_get_visible(GTK_WIDGET(shot)));
+  g_return_if_fail(IS_GTK_SHOT(shot));
 
-  gtk_widget_hide_all(GTK_WIDGET(shot));
-  gtk_shot_hide_toolbar(shot);
-  gtk_shot_input_hide(shot->input);
-  gdk_keyboard_ungrab(GDK_CURRENT_TIME);
+  if (gtk_shot_visible(shot)) {
+    gtk_shot_hide_toolbar(shot);
+    gtk_shot_input_hide(shot->input);
+    gdk_keyboard_ungrab(GDK_CURRENT_TIME);
+    gtk_widget_hide_all(GTK_WIDGET(shot));
+  }
 }
 
 void gtk_shot_show(GtkShot *shot, gboolean clean) {
-  g_return_if_fail(IS_GTK_SHOT(shot)
-                      && !gtk_widget_get_visible(GTK_WIDGET(shot)));
+  g_return_if_fail(IS_GTK_SHOT(shot));
 
+  if (gtk_shot_visible(shot)) return;
   if (clean) {
     shot->screen_pixbuf =
       gdk_pixbuf_get_from_drawable(shot->screen_pixbuf
@@ -251,9 +256,9 @@ gboolean gtk_shot_has_visible_section(GtkShot *shot) {
 /** 获取选区的实际边界(起点和终点坐标) */
 void gtk_shot_get_section(GtkShot *shot, gint *x0, gint *y0
                                           , gint *x1, gint *y1) {
-  *x0 = 0; *y0 = 0; *x1 = 0; *y1 = 0;
   g_return_if_fail(IS_GTK_SHOT(shot));
 
+  *x0 = 0; *y0 = 0; *x1 = 0; *y1 = 0;
   // 所绘矩形的起始点在线宽的中心线上,其宽度和高度包含了一个线宽
   gint b = shot->section.border / 2 + shot->section.border % 2;
   gint w = MAX(shot->section.width - shot->section.border, 0);
@@ -267,7 +272,7 @@ void gtk_shot_get_section(GtkShot *shot, gint *x0, gint *y0
 }
 
 GdkPixbuf* gtk_shot_get_section_pixbuf(GtkShot *shot) {
-  g_return_val_if_fail(gtk_shot_has_visible_section(shot), NULL);
+  if (!gtk_shot_has_visible_section(shot)) return NULL;
 
   gint x0, y0, x1, y1;
   gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
@@ -304,18 +309,24 @@ GdkPixbuf* gtk_shot_get_section_pixbuf(GtkShot *shot) {
 
 void gtk_shot_save_section_to_clipboard(GtkShot *shot) {
   GdkPixbuf *pixbuf = gtk_shot_get_section_pixbuf(shot);
-  if (pixbuf) {
-    save_pixbuf_to_clipboard(pixbuf);
-    g_object_unref(pixbuf);
-  }
+  
+  g_return_if_fail(pixbuf);
+
+  save_pixbuf_to_clipboard(pixbuf);
+  g_object_unref(pixbuf);
 }
 
 void gtk_shot_save_section_to_file(GtkShot *shot) {
   g_return_if_fail(IS_GTK_SHOT(shot));
 
+  GdkPixbuf *pixbuf = gtk_shot_get_section_pixbuf(shot);
+  if (!pixbuf) {
+    popup_message_dialog(GTK_WINDOW(shot), _("no valid selection to save"));
+    return;
+  }
+
   gchar *type = NULL;
   gboolean succ = FALSE;
-  GdkPixbuf *pixbuf = gtk_shot_get_section_pixbuf(shot);
   gchar *filename =
         choose_and_get_filename(GTK_WINDOW(shot)
                                     , &type, NULL);
@@ -327,6 +338,7 @@ void gtk_shot_save_section_to_file(GtkShot *shot) {
       popup_message_dialog(GTK_WINDOW(shot), error->message);
     }
   }
+  g_object_unref(pixbuf);
   g_free(filename);
   g_free(type);
   
@@ -363,9 +375,9 @@ void gtk_shot_remove_pen(GtkShot *shot) {
       gtk_shot_input_hide(shot->input);
     }
     shot->mode = SAVE_MODE;
+    gtk_shot_pen_free(shot->pen);
+    shot->pen = NULL;
   }
-  gtk_shot_pen_free(shot->pen);
-  shot->pen = NULL;
 }
 
 /**
@@ -401,28 +413,49 @@ void gtk_shot_set_pen(GtkShot *shot, GtkShotPen *pen) {
  * 将画笔添加到历史画笔中(浅拷贝当前画笔)
  */
 void gtk_shot_save_pen(GtkShot *shot) {
-  g_return_if_fail(IS_GTK_SHOT(shot) && shot->pen);
+  g_return_if_fail(IS_GTK_SHOT(shot));
 
-  shot->historic_pen
-      = g_slist_append(shot->historic_pen
-                        , gtk_shot_pen_flat_copy(shot->pen));
-  gtk_shot_pen_reset(shot->pen);
+  if (shot->pen) {
+    shot->historic_pen
+        = g_slist_append(shot->historic_pen
+                          , gtk_shot_pen_flat_copy(shot->pen));
+    gtk_shot_pen_reset(shot->pen);
+  }
 }
 
 /** 撤销最后加入的历史画笔 */
 void gtk_shot_undo_pen(GtkShot *shot) {
-  g_return_if_fail(IS_GTK_SHOT(shot) && shot->historic_pen);
+  g_return_if_fail(IS_GTK_SHOT(shot));
 
-  GSList *l = g_slist_last(shot->historic_pen);
+  gtk_shot_input_hide(shot->input);
+  if (shot->historic_pen) {
+    GSList *l = g_slist_last(shot->historic_pen);
 
-  gtk_shot_pen_free(GTK_SHOT_PEN(l->data));
-  shot->historic_pen =
-          g_slist_delete_link(shot->historic_pen, l);
+    gtk_shot_pen_free(GTK_SHOT_PEN(l->data));
+    shot->historic_pen =
+            g_slist_delete_link(shot->historic_pen, l);
+  }
 }
 
 /** 历史画笔是否为空 */
 gboolean gtk_shot_has_empty_historic_pen(GtkShot *shot) {
   return IS_GTK_SHOT(shot) && !shot->historic_pen;
+}
+
+void gtk_shot_grab_key(GtkShot *shot) {
+  g_return_if_fail(IS_GTK_SHOT(shot));
+
+  shot->grab_key = TRUE;
+  gdk_keyboard_grab(GTK_WIDGET(shot)->window
+                            , FALSE
+                            , GDK_CURRENT_TIME);
+}
+
+void gtk_shot_ungrab_key(GtkShot *shot) {
+  g_return_if_fail(IS_GTK_SHOT(shot));
+
+  shot->grab_key = FALSE;
+  gdk_keyboard_ungrab(GDK_CURRENT_TIME);
 }
 
 gboolean on_shot_expose(GtkWidget *widget
@@ -443,14 +476,18 @@ gboolean on_shot_expose(GtkWidget *widget
   gtk_shot_draw_section(shot, mask_cr);
   // 绘制信息窗口
   gtk_shot_draw_message(shot, mask_cr);
+  // 绘制提示信息
+  gtk_shot_draw_tip(shot, mask_cr);
   // 将mask层合并到窗口上
   cairo_set_source_surface(cr, shot->mask_surface, 0, 0);
   cairo_paint(cr);
 
   cairo_destroy(mask_cr);
   cairo_destroy(cr);
-  // 控制键盘
-  gtk_shot_grab_keyboard(shot);
+  // 捕获按键
+  if (shot->grab_key) {
+    gtk_shot_grab_key(shot);
+  }
 
   return TRUE;
 }
@@ -615,8 +652,10 @@ gboolean on_shot_key_press(GtkWidget *widget
         gtk_shot_record(shot);
         break;
       case GDK_z: // undo
-        gtk_shot_undo_pen(shot);
-        gtk_shot_refresh(shot);
+        if (!gtk_shot_has_empty_historic_pen(shot)) {
+          gtk_shot_undo_pen(shot);
+          gtk_shot_refresh(shot);
+        }
         break;
       case GDK_y: // redo
         break;
@@ -644,7 +683,7 @@ void gtk_shot_process_edit_mode(GtkShot *shot
     gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
     if (!IS_IN_RECT(event->x, event->y, x0, y0, x1, y1)) {
       gtk_shot_input_hide(shot->input);
-      gtk_shot_grab_keyboard(shot);
+      gtk_shot_grab_key(shot);
     } else {
       // 完成输入,并保存当前画笔
       char *text = gtk_shot_input_get_text(shot->input);
@@ -660,8 +699,8 @@ void gtk_shot_process_edit_mode(GtkShot *shot
                                   , shot->pen->color);
         gdk_point_assign(shot->pen->start, *event);
         gdk_point_assign(shot->pen->end, *event);
-        gdk_keyboard_ungrab(GDK_CURRENT_TIME);
-        gtk_shot_input_show(shot->input, event->x, event->y);
+        gtk_shot_ungrab_key(shot);
+        gtk_shot_input_show_at(shot->input, event->x, event->y);
       }
     }
   }
@@ -751,39 +790,72 @@ void gtk_shot_draw_anchor(GtkShot *shot, cairo_t *cr) {
 }
 
 void gtk_shot_draw_message(GtkShot *shot, cairo_t *cr) {
-  // 选区不存在,或在保存和编辑模式时,不显示信息窗口
-  if ((shot->section.width == 0 && shot->section.height == 0)
-        || shot->mode == EDIT_MODE
-        || shot->mode == SAVE_MODE) {
+  // 选区不存在,不显示信息窗口
+  if (shot->section.width == 0
+          && shot->section.height == 0) {
     return;
   }
   gint x0, y0, x1, y1;
   gtk_shot_get_section(shot, &x0, &y0, &x1, &y1);
 
-  gint radius = 8, width = 145, height = 50;
-  gint b = MAX(shot->section.border, shot->anchor_border);
-  gint x = x0 + shot->section.border;
-  gint y = y0 - b - height;
-
-  if (x1 >= shot->x + shot->width && x + width > x1) {
-    x = x1 - width - b; // 保持在屏幕内
-  }
-  if (y < shot->y) {
-    y = y0 + shot->section.border;
-  }
-  gchar *msg = g_strdup_printf("x:%4d, y:%4d\nw:%4d, h:%4d\n"
+  gchar *msg = g_strdup_printf("x:%4d, y:%4d\nw:%4d, h:%4d"
                                     , x0, y0
                                     , MAX(x1 - x0, 0)
                                     , MAX(y1 - y0, 0));
+  PangoLayout *layout =
+    pango_cairo_prepare_layout(cr, msg, "");
+
+  gint width = 0, height = 0;
+  pango_layout_get_pixel_size(layout, &width, &height);
+
+  gint radius = 8, padding = radius / 2;
+  gint b = MAX(shot->section.border, shot->anchor_border);
+  gint x = x0 + shot->section.border + padding;
+  gint y = y0 - b - height - padding;
+
+  if (x1 >= shot->x + shot->width && x + width > x1) {
+    x = x1 - width - b - padding; // 保持在屏幕内
+  }
+  if (y < shot->y) {
+    if (shot->mode == EDIT_MODE || shot->mode == SAVE_MODE) {
+      return;
+    }
+    y = y0 + shot->section.border + padding * 2;
+  }
+
   SET_CAIRO_RGBA(cr, 0x232126, shot->opacity / 2.0);
-  cairo_round_rect(cr, x, y, width, height, radius);
+  cairo_round_rect(cr, x - padding
+                      , y - padding
+                      , width + padding * 2
+                      , height + padding * 2
+                      , radius);
   cairo_fill(cr);
 
   SET_CAIRO_RGB(cr, 0xFFFFFF);
-  cairo_move_to(cr, x + radius, y + radius / 3.0);
-  cairo_draw_text(cr, msg, "");
+  cairo_move_to(cr, x, y);
+  pango_cairo_show_layout(cr, layout);
 
   g_free(msg);
+}
+
+void gtk_shot_draw_tip(GtkShot *shot, cairo_t *cr) {
+  // 仅无选区时显示提示信息
+  if (shot->section.width != 0
+        || shot->section.height != 0) {
+    return;
+  }
+
+  gint radius = 8, padding = radius / 2;
+  gint x = shot->x + radius + 10;
+  gint y = shot->y + radius + 10;
+  gchar *tip = _("left drag to select the area\nwhich will be captured");
+
+  cairo_round_msg_box(cr, tip, ""
+                        , x, y, 0xFFFFFF, 0x232126
+                        , shot->opacity / 2.0
+                        , radius
+                        , padding, padding
+                        , padding, padding);
 }
 
 void gtk_shot_clean_section(GtkShot *shot) {
@@ -987,20 +1059,4 @@ void gtk_shot_change_cursor(GtkShot *shot) {
   }
   gdk_window_set_cursor(GTK_WIDGET(shot)->window
                           , gdk_cursor_new(cursor));
-}
-
-void gtk_shot_grab_keyboard(GtkShot *shot) {
-  gint i = 0;
-  while (gdk_keyboard_grab(GTK_WIDGET(shot)->window
-                                , FALSE
-                                , GDK_CURRENT_TIME)
-            != GDK_GRAB_SUCCESS) {
-    if (i++ < GRAB_KEY_TRY_COUNT) {
-      debug("grab keyboard again after 0.1s ...\n");
-      sleep(0.1);
-    } else {
-      debug("grab keyboard failed after 10 times.\n");
-      break;
-    }
-  }
 }

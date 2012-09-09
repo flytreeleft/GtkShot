@@ -81,18 +81,18 @@ GtkShotToolbar* gtk_shot_toolbar_new(GtkShot *shot) {
 }
 
 void gtk_shot_toolbar_destroy(GtkShotToolbar *toolbar) {
-  if (toolbar) {
-    gtk_shot_pen_editor_destroy(toolbar->pen_editor);
-    gtk_widget_destroy(GTK_WIDGET(toolbar->window));
-    g_free(toolbar);
-  }
+  g_return_if_fail(toolbar != NULL);
+
+  gtk_shot_pen_editor_destroy(toolbar->pen_editor);
+  gtk_widget_destroy(GTK_WIDGET(toolbar->window));
+  g_free(toolbar);
 }
 
 void gtk_shot_toolbar_show(GtkShotToolbar *toolbar) {
-  if (toolbar) {
-    adjust_toolbar(toolbar);
-    gtk_widget_show_all(GTK_WIDGET(toolbar->window));
-  }
+  g_return_if_fail(toolbar != NULL);
+
+  adjust_toolbar(toolbar);
+  gtk_widget_show_all(GTK_WIDGET(toolbar->window));
 }
 
 void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar) {
@@ -106,10 +106,10 @@ void gtk_shot_toolbar_hide(GtkShotToolbar *toolbar) {
 }
 
 void gtk_shot_toolbar_move(GtkShotToolbar *toolbar, gint x, gint y) {
-  if (toolbar) {
-    toolbar->x = x; toolbar->y = y;
-    gtk_window_move(toolbar->window, x, y);
-  }
+  g_return_if_fail(toolbar != NULL);
+
+  toolbar->x = x; toolbar->y = y;
+  gtk_window_move(toolbar->window, x, y);
 }
 
 gboolean on_change_pen(GtkToggleButton *btn
@@ -140,15 +140,14 @@ gboolean on_change_pen(GtkToggleButton *btn
 }
 
 gboolean on_undo(GtkButton *btn, GtkShotToolbar *toolbar) {
-  g_return_val_if_fail(!gtk_shot_has_empty_historic_pen(toolbar->shot), FALSE);
-
-  gtk_shot_undo_pen(toolbar->shot);
   /*if (gtk_shot_has_empty_historic_pen(toolbar->shot)) {
     GList *l = gtk_container_get_children(GTK_CONTAINER(toolbar->pen_box));
     set_all_toggle_button_inactive(l);
   }*/
-  gtk_shot_refresh(toolbar->shot);
-
+  if (!gtk_shot_has_empty_historic_pen(toolbar->shot)) {
+    gtk_shot_undo_pen(toolbar->shot);
+    gtk_shot_refresh(toolbar->shot);
+  }
   return TRUE;
 }
 

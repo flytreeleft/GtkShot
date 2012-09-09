@@ -108,6 +108,7 @@ struct _GtkShot {
   cairo_surface_t *mask_surface; // 遮罩层
 
   GtkShotMode mode;
+  gboolean grab_key; // 是否捕获按键
   gboolean dynamic; // 是否动态截图
   gint width, height; // 窗口的宽度和高度
   gint x, y; // 窗口的起始位置坐标
@@ -136,6 +137,8 @@ void gtk_shot_destroy(GtkShot *shot);
 void gtk_shot_hide(GtkShot *shot);
 void gtk_shot_show(GtkShot *shot, gboolean clean);
 void gtk_shot_quit(GtkShot *shot);
+#define gtk_shot_visible(shot) \
+        gtk_widget_get_visible(GTK_WIDGET(shot))
 
 void gtk_shot_hide_toolbar(GtkShot *shot);
 void gtk_shot_show_toolbar(GtkShot *shot);
@@ -155,6 +158,9 @@ void gtk_shot_save_pen(GtkShot *shot);
 void gtk_shot_remove_pen(GtkShot *shot);
 void gtk_shot_undo_pen(GtkShot *shot);
 gboolean gtk_shot_has_empty_historic_pen(GtkShot *shot);
+
+void gtk_shot_grab_key(GtkShot *shot);
+void gtk_shot_ungrab_key(GtkShot *shot);
 
 GType gtk_shot_get_type();
 

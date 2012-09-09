@@ -26,6 +26,9 @@
 #include "shot.h"
 #include "pen-editor.h"
 
+// 该值需要根据SizeBox不断修改
+#define FONT_SIZE_BOX_WIDTH 112
+
 typedef struct _ColorMap {
   const char *name;
   gint color;
@@ -107,14 +110,16 @@ GtkShotPenEditor* gtk_shot_pen_editor_new(GtkShot *shot) {
 }
 
 void gtk_shot_pen_editor_destroy(GtkShotPenEditor *editor) {
-  if (editor) {
-    gtk_widget_destroy(GTK_WIDGET(editor->window));
-    g_free(editor);
-  }
+  g_return_if_fail(editor != NULL);
+
+  gtk_widget_destroy(GTK_WIDGET(editor->window));
+  g_free(editor);
 }
 
 void gtk_shot_pen_editor_show(GtkShotPenEditor *editor) {
-  if (editor && editor->pen) {
+  g_return_if_fail(editor != NULL);
+
+  if (editor->pen) {
     switch_font_size_box(editor);
     gtk_shot_pen_editor_move(editor, editor->x, editor->y);
     gtk_widget_show_all(GTK_WIDGET(editor->window));
@@ -131,16 +136,16 @@ void gtk_shot_pen_editor_hide(GtkShotPenEditor *editor) {
 }
 
 void gtk_shot_pen_editor_move(GtkShotPenEditor *editor, gint x, gint y) {
-  if (editor) {
-    editor->x = x; editor->y = y;
-    gtk_window_move(editor->window, x, y);
-  }
+  g_return_if_fail(editor != NULL);
+
+  editor->x = x; editor->y = y;
+  gtk_window_move(editor->window, x, y);
 }
 
 void gtk_shot_pen_editor_set_pen(GtkShotPenEditor *editor
                                           , GtkShotPen *pen) {
-  if (!editor) return;
-  
+  g_return_if_fail(editor != NULL);
+
   if (pen) {
     pen->color = editor->color;
     if (pen->type == GTK_SHOT_PEN_TEXT) {
@@ -156,22 +161,23 @@ void switch_font_size_box(GtkShotPenEditor *editor) {
   GList *l =
         gtk_container_get_children(GTK_CONTAINER(editor->left_box));
   GtkWidget *child = GTK_WIDGET(g_list_nth_data(l, 0));
+  GtkWidget *removed = NULL, *added = NULL;
 
   if (editor->pen->type == GTK_SHOT_PEN_TEXT
                       && child == editor->size_box) {
-    g_object_ref(editor->size_box); // 增加引用,防止被删除
-    gtk_container_remove(GTK_CONTAINER(editor->left_box)
-                            , GTK_WIDGET(editor->size_box));
-    gtk_container_add(GTK_CONTAINER(editor->left_box)
-                            , GTK_WIDGET(editor->font_box));
-
+    removed = editor->size_box;
+    added = editor->font_box;
   } else if (editor->pen->type != GTK_SHOT_PEN_TEXT
                       && child == editor->font_box) {
-    g_object_ref(editor->font_box);
+    removed = editor->font_box;
+    added = editor->size_box;
+  }
+  if (removed && added) {
+    g_object_ref(removed); // 增加引用,防止被删除
     gtk_container_remove(GTK_CONTAINER(editor->left_box)
-                            , GTK_WIDGET(editor->font_box));
+                            , GTK_WIDGET(removed));
     gtk_container_add(GTK_CONTAINER(editor->left_box)
-                            , GTK_WIDGET(editor->size_box));
+                            , GTK_WIDGET(added));
   }
 }
 
@@ -216,6 +222,8 @@ GtkBox* create_font_box(GtkShotPenEditor *editor) {
   GtkWidget *btn =
             gtk_font_button_new_with_font(GTK_SHOT_DEFAULT_PEN_FONT);
 
+  gtk_widget_set_size_request(GTK_WIDGET(btn), FONT_SIZE_BOX_WIDTH, -1);
+  gtk_widget_set_tooltip_text(GTK_WIDGET(btn), GTK_SHOT_DEFAULT_PEN_FONT);
   g_signal_connect(btn, "notify::font-name"
                       , G_CALLBACK(on_set_pen_font)
                       , editor);
@@ -306,6 +314,7 @@ void on_set_pen_font(GtkFontButton *btn, GParamSpec *pspec
     editor->fontname =
             gtk_font_button_get_font_name(GTK_FONT_BUTTON(btn));
     editor->pen->text.fontname = g_strdup(editor->fontname);
+    gtk_widget_set_tooltip_text(GTK_WIDGET(btn), editor->fontname);
 #ifdef GTK_SHOT_DEBUG
     debug("font: %s\n", editor->pen->text.fontname);
 #endif

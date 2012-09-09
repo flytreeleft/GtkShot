@@ -55,14 +55,14 @@ GtkShotInput* gtk_shot_input_new(GtkShot *shot) {
 }
 
 void gtk_shot_input_destroy(GtkShotInput *input) {
-  g_return_if_fail(input);
+  g_return_if_fail(input != NULL);
 
   gtk_widget_destroy(GTK_WIDGET(input->window));
   g_free(input);
 }
 
-void gtk_shot_input_show(GtkShotInput *input, gint x, gint y) {
-  g_return_if_fail(input);
+void gtk_shot_input_show_at(GtkShotInput *input, gint x, gint y) {
+  g_return_if_fail(input != NULL);
 
   GtkTextBuffer *buffer = gtk_text_view_get_buffer(input->view);
   gtk_text_buffer_set_text(buffer, "", -1);
@@ -74,18 +74,15 @@ void gtk_shot_input_show(GtkShotInput *input, gint x, gint y) {
 }
 
 void gtk_shot_input_hide(GtkShotInput *input) {
-  g_return_if_fail(input);
-  gtk_widget_hide_all(GTK_WIDGET(input->window));
-}
-
-gboolean gtk_shot_input_visible(GtkShotInput *input) {
-  return input && gtk_widget_get_visible(GTK_WIDGET(input->window));
+  if (gtk_shot_input_visible(input)) {
+    gtk_widget_hide_all(GTK_WIDGET(input->window));
+  }
 }
 
 void gtk_shot_input_set_font(GtkShotInput *input
                                   , const char *fontname
                                   , gint color) {
-  g_return_if_fail(input);
+  g_return_if_fail(input != NULL);
 #ifdef GTK_SHOT_DEBUG
   debug("font(%s), color(%x)\n", fontname, color);
 #endif
@@ -102,7 +99,7 @@ void gtk_shot_input_set_font(GtkShotInput *input
 }
 
 gchar* gtk_shot_input_get_text(GtkShotInput *input) {
-  g_return_val_if_fail(gtk_shot_input_visible(input), NULL);
+  if (!gtk_shot_input_visible(input)) return NULL;
 
   GtkTextBuffer *buffer;
   GtkTextIter start, end;

@@ -69,7 +69,7 @@ GtkShotPen* gtk_shot_pen_new(GtkShotPenType type) {
 }
 
 void gtk_shot_pen_free(GtkShotPen *pen) {
-  g_return_if_fail(pen);
+  g_return_if_fail(pen != NULL);
 
   if (pen->type == GTK_SHOT_PEN_LINE) {
     GSList *l = pen->tracks;
@@ -86,7 +86,7 @@ void gtk_shot_pen_free(GtkShotPen *pen) {
 
 /** 画笔复位 */
 void gtk_shot_pen_reset(GtkShotPen *pen) {
-  g_return_if_fail(pen);
+  g_return_if_fail(pen != NULL);
 
   pen->square = FALSE;
   if (pen->type == GTK_SHOT_PEN_TEXT) {
@@ -105,7 +105,7 @@ void gtk_shot_pen_reset(GtkShotPen *pen) {
 
 void gtk_shot_pen_save_general_track(GtkShotPen *pen
                                       , gint x, gint y) {
-  g_return_if_fail(pen);
+  g_return_if_fail(pen != NULL);
   pen->end.x = x;
   pen->end.y = y;
 }
@@ -115,7 +115,7 @@ void gtk_shot_pen_save_general_track(GtkShotPen *pen
  */
 void gtk_shot_pen_save_line_track(GtkShotPen *pen
                                       , gint x, gint y) {
-  g_return_if_fail(pen);
+  g_return_if_fail(pen != NULL);
   pen->end.x = x;
   pen->end.y = y;
 
@@ -257,8 +257,8 @@ void gtk_shot_pen_draw_line(GtkShotPen *pen, cairo_t *cr) {
 void gtk_shot_pen_draw_text(GtkShotPen *pen, cairo_t *cr) {
   PREPARE_PEN_AND_CAIRO(pen, cr);
 
-  g_return_if_fail(pen->text.content);
-
-  cairo_move_to(cr, pen->start.x, pen->start.y - SYSTEM_CURSOR_SIZE / 2);
-  cairo_draw_text(cr, pen->text.content, pen->text.fontname);
+  if (pen->text.content) {
+    cairo_move_to(cr, pen->start.x, pen->start.y - SYSTEM_CURSOR_SIZE / 2);
+    cairo_draw_text(cr, pen->text.content, pen->text.fontname);
+  }
 }

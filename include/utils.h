@@ -81,10 +81,20 @@ void set_all_toggle_button_inactive(GList *list);
 GtkToggleButton*
     get_active_toggle_button_except(GList *list
                                       , GtkToggleButton *btn);
+PangoLayout* pango_cairo_prepare_layout(cairo_t *cr, char *text
+                                                    , char *fontname);
 void cairo_draw_text(cairo_t *cr, char *text, char *fontname);
-void cairo_round_rect(cairo_t *cr, gfloat x, gfloat y
-                                  , gfloat width, gfloat height
-                                  , gfloat radius);
+void cairo_round_rect(cairo_t *cr, double x, double y
+                                  , double width, double height
+                                  , double radius);
+void cairo_round_msg_box(cairo_t *cr, char *text
+                                    , char *fontname
+                                    , gint x, gint y
+                                    , gint fg_color, gint bg_color
+                                    , gfloat bg_opacity
+                                    , gint corner_radius
+                                    , gint pad_top, gint pad_right
+                                    , gint pad_bottom, gint pad_left);
 /**
  * 仅设置Toggle按钮的激活状态,但不产生激活事件
  */
