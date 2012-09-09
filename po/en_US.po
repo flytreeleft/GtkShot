@@ -1,0 +1,139 @@
+# GtkShot Translation.
+# Copyright (C) 2012
+# This file is distributed under the same license as the GtkShot package.
+# dengjun <flytreeleft@126.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.1\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2012-08-25 22:01+0800\n"
+"PO-Revision-Date: 2012-08-25 22:01+0800\n"
+"Last-Translator: dengjun <flytreeleft@126.com>\n"
+"Language-Team: en_US <LL@li.org>\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ../src/pen-editor.c:37
+msgid "white"
+msgstr ""
+
+#: ../src/pen-editor.c:38
+msgid "silver"
+msgstr ""
+
+#: ../src/pen-editor.c:39
+msgid "red"
+msgstr ""
+
+#: ../src/pen-editor.c:40
+msgid "yellow"
+msgstr ""
+
+#: ../src/pen-editor.c:41
+msgid "lime"
+msgstr ""
+
+#: ../src/pen-editor.c:42
+msgid "blue"
+msgstr ""
+
+#: ../src/pen-editor.c:43
+msgid "fuchsia"
+msgstr ""
+
+#: ../src/pen-editor.c:44
+msgid "cyan"
+msgstr ""
+
+#: ../src/pen-editor.c:45
+msgid "black"
+msgstr ""
+
+#: ../src/pen-editor.c:46
+msgid "gray"
+msgstr ""
+
+#: ../src/pen-editor.c:47
+msgid "maroon"
+msgstr ""
+
+#: ../src/pen-editor.c:48
+msgid "olive"
+msgstr ""
+
+#: ../src/pen-editor.c:49
+msgid "green"
+msgstr ""
+
+#: ../src/pen-editor.c:50
+msgid "navy"
+msgstr ""
+
+#: ../src/pen-editor.c:51
+msgid "purple"
+msgstr ""
+
+#: ../src/pen-editor.c:52
+msgid "teal"
+msgstr ""
+
+#: ../src/pen-editor.c:189
+msgid "small"
+msgstr ""
+
+#: ../src/pen-editor.c:200
+msgid "normal"
+msgstr ""
+
+#: ../src/pen-editor.c:209
+msgid "big"
+msgstr ""
+
+#: ../src/shot.c:324
+msgid "no valid selection to save"
+msgstr ""
+
+#: ../src/shot.c:851
+msgid ""
+"left drag to select the area\n"
+"which will be captured"
+msgstr ""
+
+#: ../src/toolbar.c:35
+msgid "draw rectangle"
+msgstr ""
+
+#: ../src/toolbar.c:36
+msgid "draw ellipse"
+msgstr ""
+
+#: ../src/toolbar.c:37
+msgid "draw arrow"
+msgstr ""
+
+#: ../src/toolbar.c:38
+msgid "draw line"
+msgstr ""
+
+#: ../src/toolbar.c:39
+msgid "draw text"
+msgstr ""
+
+#: ../src/toolbar.c:195
+msgid "undo"
+msgstr "undo(Ctrl+Z)"
+
+#: ../src/toolbar.c:200
+msgid "save to file"
+msgstr "save to file(Ctrl+S)"
+
+#: ../src/toolbar.c:206
+msgid "exit"
+msgstr "exit(Ctrl+Q)"
+
+#: ../src/toolbar.c:211
+msgid "finish"
+msgstr "finish(Ctrl+O)"
