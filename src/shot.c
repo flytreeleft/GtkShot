@@ -97,13 +97,11 @@ static void gtk_shot_change_cursor(GtkShot *shot);
 G_DEFINE_TYPE(GtkShot, gtk_shot, GTK_TYPE_WINDOW)
 
 void gtk_shot_class_init(GtkShotClass *klass) {
-  GObjectClass *obj_class;
-  GtkWidgetClass *widget_class;
+  GObjectClass *obj_class = G_OBJECT_CLASS(klass);
+  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
 
-  obj_class = (GObjectClass*) klass;
   obj_class->finalize = gtk_shot_finalize;
 
-  widget_class = GTK_WIDGET_CLASS(klass);
   widget_class->expose_event = on_shot_expose;
   widget_class->button_press_event = on_shot_button_press;
   widget_class->button_release_event = on_shot_button_release;
@@ -824,9 +822,9 @@ void gtk_shot_draw_message(GtkShot *shot, cairo_t *cr) {
   }
 
   SET_CAIRO_RGBA(cr, 0x232126, shot->opacity / 2.0);
-  cairo_round_rect(cr, x - padding
+  cairo_round_rect(cr, x - padding * 2
                       , y - padding
-                      , width + padding * 2
+                      , width + padding * 4
                       , height + padding * 2
                       , radius);
   cairo_fill(cr);
@@ -854,8 +852,8 @@ void gtk_shot_draw_tip(GtkShot *shot, cairo_t *cr) {
                         , x, y, 0xFFFFFF, 0x232126
                         , shot->opacity / 2.0
                         , radius
-                        , padding, padding
-                        , padding, padding);
+                        , padding, padding * 2
+                        , padding, padding * 2);
 }
 
 void gtk_shot_clean_section(GtkShot *shot) {
