@@ -132,7 +132,7 @@ gchar* choose_and_get_filename(GtkWindow *parent, char **type
 GtkWindow* create_popup_window(GtkWindow *parent
                                     , gint width, gint height) {
   GtkWindow *window =
-            GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
+            GTK_WINDOW(gtk_window_new(/*GTK_WINDOW_TOPLEVEL*/GTK_WINDOW_POPUP));
 
   gtk_window_set_transient_for(window, parent);
   gtk_window_set_decorated(window, FALSE);
