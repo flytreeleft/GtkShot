@@ -316,6 +316,7 @@ void gtk_shot_save_section_to_clipboard(GtkShot *shot) {
 
 void gtk_shot_save_section_to_file(GtkShot *shot) {
   g_return_if_fail(IS_GTK_SHOT(shot));
+  gtk_shot_hide_toolbar(shot);
 
   GdkPixbuf *pixbuf = gtk_shot_get_section_pixbuf(shot);
   if (!pixbuf) {
@@ -342,6 +343,8 @@ void gtk_shot_save_section_to_file(GtkShot *shot) {
   
   if (succ) {
     gtk_shot_quit(shot);
+  } else {
+    gtk_shot_show_toolbar(shot);
   }
 }
 
