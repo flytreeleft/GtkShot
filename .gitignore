@@ -6,5 +6,13 @@ config.status
 libtool
 stamp-h1
 autom4te.cache
-config.h.in~
+config.h.in*
 *.swp
+Makefile.in
+aclocal.m4
+compile
+configure
+depcomp
+ltmain.sh
+missing
+Makefile.in.in
