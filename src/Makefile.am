@@ -17,4 +17,4 @@ gtkshot_SOURCES = \
 		pen-editor.c \
 		input.c \
 		utils.c
-gtkshot_LDADD = $(X11_LIBS) $(GTK_LIBS)
+gtkshot_LDADD = $(X11_LIBS) $(GTK_LIBS) -lm
